@@ -44,6 +44,7 @@ export default function Login() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
       <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md border-t-8 border-blue-900">
+        <img src="/logo.png" alt="InternTrack Logo" className="w-20 h-20 mx-auto mb-4 object-contain" />
         <h1 className="text-3xl font-bold text-blue-900 mb-2 text-center">InternTrack</h1>
         <p className="text-gray-500 mb-6 text-center">
           {isRegistering ? 'Create a new secure account' : 'Please sign in to continue'}
@@ -90,5 +91,4 @@ export default function Login() {
       </div>
     </div>
   );
-
 }
