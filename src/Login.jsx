@@ -15,7 +15,7 @@ export default function Login() {
     if (isRegistering) {
       // HANDLE REGISTRATION
       try {
-        await axios.post('https://interntrack-api.onrender.com', { email, password, role });
+        await axios.post('https://interntrack-api.onrender.com/api/register', { email, password, role });
         alert('Account created! You can now log in.');
         setIsRegistering(false); // Switch back to login view
         setPassword(''); // Clear password field for safety
@@ -25,7 +25,7 @@ export default function Login() {
     } else {
       // HANDLE LOGIN
       try {
-        const response = await axios.post('https://interntrack-api.onrender.com', { email, password });
+        const response = await axios.post('https://interntrack-api.onrender.com/api/login', { email, password });
         
         // The backend tells us if they are a student or admin!
         const userRole = response.data.role; 
@@ -90,4 +90,5 @@ export default function Login() {
       </div>
     </div>
   );
+
 }
