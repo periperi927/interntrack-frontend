@@ -24,16 +24,18 @@ export default function Student() {
   };
 
   const deleteLog = async (id) => {
-    if (window.confirm("Are you sure you want to delete this log?")) {
-      try {
-        await axios.delete(`https://interntrack-api.onrender.com/api/logs/${id}`);
-        fetchLogs();
-      } catch (error) {
-        console.error("Error deleting log", error);
-        alert("Failed to delete. Check console for errors.");
-      }
+  if (!id) return alert("Error: Log ID is missing!"); // Safety check
+  
+  if (window.confirm("Are you sure you want to delete this log?")) {
+    try {
+      // Ensure there is a slash before the ${id}
+      await axios.delete(`https://interntrack-api.onrender.com/api/logs/${id}`);
+      fetchLogs(); 
+    } catch (error) {
+      console.error("Error deleting log", error);
     }
-  };
+  }
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -137,7 +139,11 @@ export default function Student() {
                       </span>
                     </td>
                     <td className="p-3 border-b">
-                      <button onClick={() => deleteLog(log._id)} className="text-red-400 hover:text-red-600 transition">🗑️</button>
+                      onClick={() => deleteLog(log._id)} // MUST have the underscore
+        className="text-red-400 hover:text-red-600 transition"
+      >
+        🗑️
+      </button>
                     </td>
                   </tr>
                 ))}
@@ -149,4 +155,5 @@ export default function Student() {
     </div>
   );
 }
+
 
