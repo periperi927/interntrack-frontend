@@ -9,7 +9,7 @@ export default function Login() {
   const [role, setRole] = useState('student'); // Only used when registering
   const navigate = useNavigate();
 
- const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (isRegistering) {
@@ -92,5 +92,4 @@ export default function Login() {
       </div>
     </div>
   );
-
 }
