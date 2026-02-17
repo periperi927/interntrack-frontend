@@ -7,10 +7,7 @@ export default function Student() {
   const [form, setForm] = useState({ student: '', hours: '', description: '' });
   const navigate = useNavigate();
 
-  // Fetch the logs as soon as the student logs in
-  useEffect(() => {
-    fetchLogs();
-  }, []);
+  useEffect(() => { fetchLogs(); }, []);
 
   const fetchLogs = async () => {
     try {
@@ -21,46 +18,49 @@ export default function Student() {
     }
   };
 
+  // FIX 1: deleteLog should be its own separate function
+  const deleteLog = async (id) => {
+    if (window.confirm("Are you sure you want to delete this log?")) {
+      try {
+        await axios.delete(`https://interntrack-api.onrender.com/api/logs/${id}`);
+        fetchLogs(); 
+      } catch (error) {
+        console.error("Error deleting log", error);
+      }
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.student || !form.hours || !form.description) return alert('Fill all fields');
-    
     try {
       await axios.post('https://interntrack-api.onrender.com/api/logs', form);
-      // Keep the student's name in the form, but clear the hours and task!
       setForm({ ...form, hours: '', description: '' }); 
-      fetchLogs(); // Instantly refresh the progress bar and table
+      fetchLogs(); 
     } catch (error) {
       console.error("Error saving log", error);
     }
   };
 
-  // --- PROGRESS CALCULATIONS ---
-  // Add up all hours where the status is "Approved"
-  const approvedHours = logs
-    .filter(log => log.status === 'Approved')
-    .reduce((sum, log) => sum + Number(log.hours), 0);
-
-  // Add up all hours where the status is "Pending"
-  const pendingHours = logs
-    .filter(log => log.status === 'Pending')
-    .reduce((sum, log) => sum + Number(log.hours), 0);
-
-  // Calculate the percentage for the progress bar (Max 600 hours)
+  const approvedHours = logs.filter(log => log.status === 'Approved').reduce((sum, log) => sum + Number(log.hours), 0);
+  const pendingHours = logs.filter(log => log.status === 'Pending').reduce((sum, log) => sum + Number(log.hours), 0);
   const goal = 600;
   const progressPercentage = Math.min((approvedHours / goal) * 100, 100);
 
   return (
     <div className="min-h-screen bg-gray-100 p-8 font-sans">
       <header className="flex justify-between items-center mb-8 border-b-2 border-gray-200 pb-4">
-        <div>
-          <h1 className="text-3xl font-bold text-blue-900">Student Portal</h1>
-          <p className="text-gray-600">Track and submit your daily OJT hours</p>
+        <div className="flex items-center gap-4">
+           <img src="/logo.png" alt="Logo" className="w-12 h-12 object-contain" />
+           <div>
+             <h1 className="text-3xl font-bold text-blue-900">Student Portal</h1>
+             <p className="text-gray-600">Track and submit your daily OJT hours</p>
+           </div>
         </div>
         <button onClick={() => navigate('/')} className="text-red-500 hover:text-red-700 font-bold transition">Logout</button>
       </header>
 
-      {/* --- DASHBOARD WIDGETS --- */}
+      {/* STATS & PROGRESS BAR (Kept same as yours) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
           <p className="text-sm text-gray-500 uppercase font-bold">Approved Hours</p>
@@ -76,24 +76,17 @@ export default function Student() {
         </div>
       </div>
 
-      {/* --- PROGRESS BAR --- */}
       <div className="bg-white p-6 rounded-xl shadow-sm mb-8">
         <div className="flex justify-between mb-2">
           <span className="font-bold text-gray-700">OJT Progress</span>
           <span className="font-bold text-blue-600">{approvedHours} / {goal} Hours</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-4">
-          <div 
-            className="bg-blue-600 h-4 rounded-full transition-all duration-1000 ease-in-out" 
-            style={{ width: `${progressPercentage}%` }}
-          ></div>
+          <div className="bg-blue-600 h-4 rounded-full transition-all duration-1000" style={{ width: `${progressPercentage}%` }}></div>
         </div>
       </div>
 
-      {/* --- BOTTOM SECTION: FORM & TABLE --- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Left Side: The Form */}
         <div className="lg:col-span-1 bg-white p-6 rounded-lg shadow-md h-fit">
           <h2 className="text-xl font-bold mb-4 border-b pb-2">Log New Activity</h2>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -104,9 +97,11 @@ export default function Student() {
           </form>
         </div>
 
-        {/* Right Side: Mini History Table */}
         <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-bold mb-4 border-b pb-2">My Recent Submissions</h2>
+          <div className="flex justify-between items-center mb-4 border-b pb-2">
+            <h2 className="text-xl font-bold">My Recent Submissions</h2>
+            <button onClick={fetchLogs} className="text-blue-600 text-sm font-bold hover:underline">🔄 Refresh Status</button>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -115,29 +110,35 @@ export default function Student() {
                   <th className="p-3 border-b">Hours</th>
                   <th className="p-3 border-b">Task</th>
                   <th className="p-3 border-b">Status</th>
+                  {/* FIX 2: Added the 'Action' header here! */}
+                  <th className="p-3 border-b text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {logs.map((log) => (
                   <tr key={log._id} className="hover:bg-gray-50 transition">
-                    <td className="p-3 border-b">{new Date(log.date).toLocaleDateString()}</td>
-                    <td className="p-3 border-b font-bold">{log.hours}</td>
-                    <td className="p-3 border-b text-sm text-gray-600 truncate max-w-xs">{log.description}</td>
+                    <td className="p-3 border-b text-sm">{new Date(log.date).toLocaleDateString()}</td>
+                    <td className="p-3 border-b font-bold">{log.hours}h</td>
+                    <td className="p-4 border-b text-sm text-gray-600">{log.description}</td>
                     <td className="p-3 border-b">
-                      <span className={`px-2 py-1 rounded text-xs font-bold ${log.status === 'Approved' ? 'bg-green-100 text-green-700' : log.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
+                        log.status === 'Approved' ? 'bg-green-100 text-green-700' : 
+                        log.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+                      }`}>
                         {log.status}
                       </span>
+                    </td>
+                    {/* FIX 3: The button now lives inside the row mapping! */}
+                    <td className="p-3 border-b text-center">
+                      <button onClick={() => deleteLog(log._id)} className="hover:scale-125 transition-transform">🗑️</button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {logs.length === 0 && <p className="text-center text-gray-500 mt-6 italic">You haven't submitted any logs yet!</p>}
           </div>
         </div>
-
       </div>
     </div>
   );
-
 }
