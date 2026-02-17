@@ -14,7 +14,7 @@ export default function Student() {
 
   const fetchLogs = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/logs');
+      const response = await axios.get('https://interntrack-api.onrender.com/api/logs');
       setLogs(response.data);
     } catch (error) {
       console.error("Error fetching logs", error);
@@ -139,4 +139,5 @@ export default function Student() {
       </div>
     </div>
   );
+
 }
