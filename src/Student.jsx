@@ -139,7 +139,7 @@ export default function Student() {
                       </span>
                     </td>
                     <td className="p-3 border-b">
-                      onClick={() => deleteLog(log._id)} // MUST have the underscore
+                      <button onClick={() => deleteLog(log._id)} // MUST have the underscore
         className="text-red-400 hover:text-red-600 transition"
       >
         🗑️
@@ -155,5 +155,6 @@ export default function Student() {
     </div>
   );
 }
+
 
 
