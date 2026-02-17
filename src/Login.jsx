@@ -9,25 +9,26 @@ export default function Login() {
   const [role, setRole] = useState('student'); // Only used when registering
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+ const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (isRegistering) {
-      // HANDLE REGISTRATION
       try {
         await axios.post('https://interntrack-api.onrender.com/api/register', { email, password, role });
         alert('Account created! You can now log in.');
-        setIsRegistering(false); // Switch back to login view
-        setPassword(''); // Clear password field for safety
+        setIsRegistering(false);
+        setPassword('');
       } catch (error) {
         alert('Error creating account. Email might already be taken.');
       }
     } else {
-      // HANDLE LOGIN
       try {
         const response = await axios.post('https://interntrack-api.onrender.com/api/login', { email, password });
         
-        // The backend tells us if they are a student or admin!
+        // --- ADD THESE LINES ---
+        localStorage.setItem('userEmail', email); // This saves the email to the browser
+        // -----------------------
+
         const userRole = response.data.role; 
         
         if (userRole === 'admin') {
@@ -91,4 +92,5 @@ export default function Login() {
       </div>
     </div>
   );
+
 }
