@@ -30,6 +30,7 @@ export default function Student() {
         fetchLogs();
       } catch (error) {
         console.error("Error deleting log", error);
+        alert("Failed to delete. Check console for errors.");
       }
     }
   };
@@ -148,3 +149,4 @@ export default function Student() {
     </div>
   );
 }
+
