@@ -73,8 +73,10 @@ export default function Student() {
   return (
     <div className="min-h-screen bg-gray-100 p-8 font-sans">
       <header className="flex justify-between items-center mb-8 border-b-2 border-gray-200 pb-4">
+        <div className="flex items-center gap-6">
+          <img src="/logo.png" alt="Logo" className="w-20 h-20 object-contain drop-shadow-md" />
         <div>
-          <h1 className="text-3xl font-bold text-blue-900">Student Portal</h1>
+          <h1 className="text-4xl font-extrabold text-blue-900">Student Portal</h1>
           <p className="text-gray-600 italic">Welcome back, {currentUserEmail}</p>
         </div>
         <button onClick={() => {
@@ -155,6 +157,7 @@ export default function Student() {
     </div>
   );
 }
+
 
 
 
