@@ -4,6 +4,7 @@ import axios from 'axios';
 
 export default function Supervisor() {
   const [logs, setLogs] = useState([]);
+  const [searchTerm, setSearchTerm] = useState(''); // New state for search
   const navigate = useNavigate();
 
   useEffect(() => { fetchLogs(); }, []);
@@ -26,38 +27,34 @@ export default function Supervisor() {
     }
   };
 
-  // --- DOWNLOAD CSV LOGIC ---
   const downloadCSV = () => {
-    const historyLogs = logs.filter(log => log.status !== 'Pending');
-    
-    // Define the headers
+    const historyLogs = filteredLogs.filter(log => log.status !== 'Pending');
     const headers = ["Date", "Student", "Hours", "Task Description", "Status"];
-    
-    // Map the logs to rows
     const rows = historyLogs.map(log => [
       new Date(log.date).toLocaleDateString(),
       log.student,
       log.hours,
-      log.description.replace(/,/g, " "), // Remove commas to prevent breaking CSV columns
+      log.description.replace(/,/g, " "),
       log.status
     ]);
-
-    // Combine headers and rows
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
-
-    // Create the download link
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
     link.setAttribute("download", `OJT_Report_${new Date().toLocaleDateString()}.csv`);
-    link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const studentSummaries = logs.reduce((acc, log) => {
+  // --- SEARCH LOGIC ---
+  const filteredLogs = logs.filter(log => 
+    log.student.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    log.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const studentSummaries = filteredLogs.reduce((acc, log) => {
     const student = log.student;
     if (!acc[student]) acc[student] = { approved: 0, pending: 0 };
     if (log.status === 'Approved') acc[student].approved += Number(log.hours);
@@ -65,8 +62,8 @@ export default function Supervisor() {
     return acc;
   }, {});
 
-  const pendingLogs = logs.filter(log => log.status === 'Pending');
-  const historyLogs = logs.filter(log => log.status !== 'Pending');
+  const pendingLogs = filteredLogs.filter(log => log.status === 'Pending');
+  const historyLogs = filteredLogs.filter(log => log.status !== 'Pending');
 
   return (
     <div className="min-h-screen bg-gray-100 p-8 font-sans">
@@ -78,15 +75,28 @@ export default function Supervisor() {
             <p className="text-gray-600">Review and approve student hours</p>
           </div>
         </div>
-        <button 
-          onClick={() => { localStorage.removeItem('userEmail'); navigate('/'); }} 
-          className="bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold hover:bg-red-100 transition"
-        >
-          Logout
-        </button>
+        <div className="flex items-center gap-4">
+          {/* THE SEARCH BAR */}
+          <div className="relative">
+            <input 
+              type="text" 
+              placeholder="Search student or task..." 
+              className="pl-10 pr-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none w-64 shadow-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <span className="absolute left-3 top-2.5 opacity-30">🔍</span>
+          </div>
+          <button 
+            onClick={() => { localStorage.removeItem('userEmail'); navigate('/'); }} 
+            className="bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold hover:bg-red-100 transition"
+          >
+            Logout
+          </button>
+        </div>
       </header>
 
-      {/* STUDENT PROGRESS TRACKER */}
+      {/* OVERALL STUDENT PROGRESS */}
       <div className="bg-white p-6 rounded-lg shadow-md mb-8 border-t-4 border-blue-600">
         <h2 className="text-xl font-bold mb-4 text-blue-900">📊 Overall Student Progress</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -140,14 +150,11 @@ export default function Supervisor() {
         </div>
       </div>
 
-      {/* ACTION HISTORY + EXPORT BUTTON */}
+      {/* ACTION HISTORY + EXPORT */}
       <div className="bg-white p-6 rounded-lg shadow-md border-t-4 border-gray-300">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-gray-700">📜 Action History</h2>
-          <button 
-            onClick={downloadCSV}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-700 transition flex items-center gap-2"
-          >
+          <button onClick={downloadCSV} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-700 transition flex items-center gap-2">
             📥 Download Report
           </button>
         </div>
