@@ -26,7 +26,17 @@ export default function Supervisor() {
     }
   };
 
-  // Separating logs for a cleaner workflow
+  // --- LOGIC: Group hours by Student ---
+  const studentSummaries = logs.reduce((acc, log) => {
+    const student = log.student;
+    if (!acc[student]) {
+      acc[student] = { approved: 0, pending: 0 };
+    }
+    if (log.status === 'Approved') acc[student].approved += Number(log.hours);
+    if (log.status === 'Pending') acc[student].pending += Number(log.hours);
+    return acc;
+  }, {});
+
   const pendingLogs = logs.filter(log => log.status === 'Pending');
   const historyLogs = logs.filter(log => log.status !== 'Pending');
 
@@ -34,7 +44,6 @@ export default function Supervisor() {
     <div className="min-h-screen bg-gray-100 p-8 font-sans">
       <header className="flex justify-between items-center mb-8 border-b-2 border-gray-200 pb-4">
         <div className="flex items-center gap-4">
-          {/* Consistent Branding */}
           <img src="/logo.png" alt="Logo" className="w-12 h-12 object-contain" />
           <div>
             <h1 className="text-3xl font-bold text-blue-900">Admin Portal</h1>
@@ -42,12 +51,43 @@ export default function Supervisor() {
           </div>
         </div>
         <button 
-          onClick={() => navigate('/')} 
+          onClick={() => {
+            localStorage.removeItem('userEmail');
+            navigate('/');
+          }} 
           className="bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold hover:bg-red-100 transition"
         >
           Logout
         </button>
       </header>
+
+      {/* SECTION: STUDENT PROGRESS TRACKER */}
+      <div className="bg-white p-6 rounded-lg shadow-md mb-8 border-t-4 border-blue-600">
+        <h2 className="text-xl font-bold mb-4 text-blue-900">📊 Overall Student Progress</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Object.keys(studentSummaries).length === 0 ? (
+            <p className="text-gray-500 italic">No student data found yet.</p>
+          ) : (
+            Object.keys(studentSummaries).map(studentEmail => {
+              const data = studentSummaries[studentEmail];
+              const percent = Math.min((data.approved / 600) * 100, 100).toFixed(1);
+              return (
+                <div key={studentEmail} className="border p-4 rounded-lg bg-gray-50">
+                  <p className="font-bold text-gray-700 truncate">{studentEmail}</p>
+                  <div className="flex justify-between text-sm my-2">
+                    <span>Approved: <b>{data.approved}h</b></span>
+                    <span>Pending: <b className="text-yellow-600">{data.pending}h</b></span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="bg-green-500 h-2 rounded-full transition-all duration-500" style={{ width: `${percent}%` }}></div>
+                  </div>
+                  <p className="text-[10px] text-right mt-1 font-bold text-green-600">{percent}% Complete</p>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
 
       {/* SECTION: PENDING SUBMISSIONS */}
       <div className="bg-white p-6 rounded-lg shadow-md mb-8 border-t-4 border-orange-400">
