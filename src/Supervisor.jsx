@@ -67,34 +67,43 @@ export default function Supervisor() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-8 font-sans">
-      <header className="flex justify-between items-center mb-8 border-b-2 border-gray-200 pb-4">
-        <div className="flex items-center gap-6">
-          <img src="/logo.png" alt="Logo" className="w-20 h-20 object-contain" />
-          <div>
-            <h1 className="text-3xl font-extrabold text-blue-900">Admin Portal</h1>
-            <p className="text-gray-600">Review and approve student hours</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          {/* THE SEARCH BAR */}
-          <div className="relative">
-            <input 
-              type="text" 
-              placeholder="Search student or task..." 
-              className="pl-10 pr-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none w-64 shadow-sm"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <span className="absolute left-3 top-2.5 opacity-30">🔍</span>
-          </div>
-          <button 
-            onClick={() => { localStorage.removeItem('userEmail'); navigate('/'); }} 
-            className="bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold hover:bg-red-100 transition"
-          >
-            Logout
-          </button>
-        </div>
-      </header>
+     <header className="flex justify-between items-center mb-10 border-b-2 border-gray-200 pb-6">
+  <div className="flex items-center gap-6">
+    {/* This white box creates the 'badge' look you see in professional apps */}
+    <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center justify-center">
+      <img 
+        src="/logo.png" 
+        alt="InternTrack Logo" 
+        className="w-44 h-auto object-contain" 
+      />
+    </div>
+    <div>
+      <h1 className="text-4xl font-extrabold text-blue-900 tracking-tight">Admin Portal</h1>
+      <p className="text-gray-500 font-medium italic">Review and approve student hours</p>
+    </div>
+  </div>
+
+  <div className="flex items-center gap-4">
+    {/* THE SEARCH BAR */}
+    <div className="relative">
+      <input 
+        type="text" 
+        placeholder="Search student or task..." 
+        className="pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none w-72 shadow-sm transition-all"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+      <span className="absolute left-3 top-2.5 opacity-40 text-lg">🔍</span>
+    </div>
+
+    <button 
+      onClick={() => { localStorage.removeItem('userEmail'); navigate('/'); }} 
+      className="bg-red-50 text-red-600 px-6 py-2 rounded-full font-bold hover:bg-red-600 hover:text-white transition-all duration-300 shadow-sm border border-red-100"
+    >
+      Logout
+    </button>
+  </div>
+</header>
 
       {/* OVERALL STUDENT PROGRESS */}
       <div className="bg-white p-6 rounded-lg shadow-md mb-8 border-t-4 border-blue-600">
@@ -188,4 +197,5 @@ export default function Supervisor() {
     </div>
   );
 }
+
 
