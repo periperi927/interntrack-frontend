@@ -72,9 +72,11 @@ export default function Student() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-8 font-sans">
-      <header className="flex justify-between items-center mb-8 border-b-2 border-gray-200 pb-4">
+      <header className="flex justify-between items-center mb-10 border-b-2 border-gray-200 pb-6">
         <div className="flex items-center gap-6">
-          <img src="/logo.png" alt="Logo" className="w-20 h-20 object-contain drop-shadow-md" />
+          <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-100">
+          <img src="/logo.png" alt="InternTrack Logo"
+            className="w-40 h-auto object-contain"
         <div>
           <h1 className="text-4xl font-extrabold text-blue-900">Student Portal</h1>
           <p className="text-gray-600 italic">Welcome back, {currentUserEmail}</p>
@@ -158,6 +160,7 @@ export default function Student() {
     </div>
   );
 }
+
 
 
 
