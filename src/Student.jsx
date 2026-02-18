@@ -79,6 +79,7 @@ export default function Student() {
           <h1 className="text-4xl font-extrabold text-blue-900">Student Portal</h1>
           <p className="text-gray-600 italic">Welcome back, {currentUserEmail}</p>
         </div>
+        </div>
         <button onClick={() => {
           localStorage.removeItem('userEmail'); // Clean up memory on logout
           navigate('/');
@@ -157,6 +158,7 @@ export default function Student() {
     </div>
   );
 }
+
 
 
 
