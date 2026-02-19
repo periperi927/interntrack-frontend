@@ -30,6 +30,19 @@ export default function Supervisor() {
     return new Date(dateString).toLocaleTimeString([], options);
   };
 
+  // --- HELPER: CALCULATES DAYS SINCE LAST LOG ---
+  const getTimeAgo = (dateString) => {
+    const logDate = new Date(dateString);
+    const today = new Date();
+    // Reset hours to compare dates only
+    const diffTime = Math.abs(today.setHours(0,0,0,0) - new Date(dateString).setHours(0,0,0,0));
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return "Active Today";
+    if (diffDays === 1) return "Active Yesterday";
+    return `Active ${diffDays} days ago`;
+  };
+
   const updateStatus = async (id, newStatus) => {
     try {
       await axios.put(`https://interntrack-api.onrender.com/api/logs/${id}`, { status: newStatus });
@@ -66,18 +79,25 @@ export default function Supervisor() {
     log.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // --- UPDATED REDUCER: NOW TRACKS LAST LOG DATE ---
   const studentSummaries = filteredLogs.reduce((acc, log) => {
     const student = log.student;
-    if (!acc[student]) acc[student] = { approved: 0, pending: 0 };
+    if (!acc[student]) {
+      acc[student] = { approved: 0, pending: 0, lastDate: log.date };
+    }
     if (log.status === 'Approved') acc[student].approved += Number(log.hours);
     if (log.status === 'Pending') acc[student].pending += Number(log.hours);
+    
+    // Check if this log is more recent than the saved lastDate
+    if (new Date(log.date) > new Date(acc[student].lastDate)) {
+      acc[student].lastDate = log.date;
+    }
     return acc;
   }, {});
 
   const pendingLogs = filteredLogs.filter(log => log.status === 'Pending');
   const historyLogs = filteredLogs.filter(log => log.status !== 'Pending');
 
-  // --- NEW STATS CALCULATIONS ---
   const totalStudents = Object.keys(studentSummaries).length;
   const totalApprovedHours = logs.filter(l => l.status === 'Approved').reduce((sum, l) => sum + Number(l.hours), 0);
 
@@ -121,7 +141,7 @@ export default function Supervisor() {
         </div>
       </header>
 
-      {/* --- NEW QUICK STATS BAR --- */}
+      {/* QUICK STATS BAR */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         <div className="bg-blue-900 text-white p-6 rounded-2xl shadow-lg transform hover:scale-[1.02] transition-transform">
           <p className="text-blue-200 text-xs font-black uppercase tracking-widest">Total Active Students</p>
@@ -137,7 +157,7 @@ export default function Supervisor() {
         </div>
       </div>
 
-      {/* OVERALL STUDENT PROGRESS */}
+      {/* INDIVIDUAL PROGRESS WITH LAST ACTIVE FEATURE */}
       <div className="bg-white p-6 rounded-lg shadow-md mb-8 border-t-4 border-blue-600">
         <h2 className="text-xl font-bold mb-4 text-blue-900 flex items-center gap-2">
           📊 Individual Progress
@@ -151,10 +171,21 @@ export default function Supervisor() {
           {Object.keys(studentSummaries).map(studentEmail => {
             const data = studentSummaries[studentEmail];
             const percent = Math.min((data.approved / 600) * 100, 100).toFixed(1);
+            const isActiveToday = getTimeAgo(data.lastDate) === "Active Today";
+            
             return (
               <div key={studentEmail} className="border p-4 rounded-lg bg-gray-50 shadow-inner hover:border-blue-300 transition-colors">
-                <p className="font-bold text-gray-700 truncate text-lg">{formatName(studentEmail)}</p>
-                <p className="text-[10px] text-gray-400 mb-2 truncate italic">{studentEmail}</p>
+                <div className="flex justify-between items-start mb-1">
+                    <div>
+                        <p className="font-bold text-gray-700 truncate text-lg leading-tight">{formatName(studentEmail)}</p>
+                        <p className="text-[10px] text-gray-400 truncate italic">{studentEmail}</p>
+                    </div>
+                    {/* LAST ACTIVE BADGE */}
+                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ${isActiveToday ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-gray-200 text-gray-500'}`}>
+                        {getTimeAgo(data.lastDate)}
+                    </span>
+                </div>
+                
                 <div className="flex justify-between text-sm my-2">
                   <span>Approved: <b>{data.approved}h</b></span>
                   <span className={data.pending > 0 ? "text-orange-600 font-bold" : "text-gray-500"}>
