@@ -18,7 +18,6 @@ export default function Supervisor() {
     }
   };
 
-  // --- HELPER: TURNS EMAIL INTO FIRST NAME ---
   const formatName = (email) => {
     if (!email) return "Unknown";
     const namePart = email.split('@')[0];
@@ -26,7 +25,6 @@ export default function Supervisor() {
     return firstName.charAt(0).toUpperCase() + firstName.slice(1);
   };
 
-  // --- NEW HELPER: FORMATS THE CLOCK TIME ---
   const formatTime = (dateString) => {
     const options = { hour: '2-digit', minute: '2-digit', hour12: true };
     return new Date(dateString).toLocaleTimeString([], options);
@@ -79,8 +77,12 @@ export default function Supervisor() {
   const pendingLogs = filteredLogs.filter(log => log.status === 'Pending');
   const historyLogs = filteredLogs.filter(log => log.status !== 'Pending');
 
+  // --- NEW STATS CALCULATIONS ---
+  const totalStudents = Object.keys(studentSummaries).length;
+  const totalApprovedHours = logs.filter(l => l.status === 'Approved').reduce((sum, l) => sum + Number(l.hours), 0);
+
   return (
-    <div className="min-h-screen bg-gray-100 p-8 font-sans">
+    <div className="min-h-screen bg-gray-100 p-8 font-sans text-gray-800">
       <header className="flex justify-between items-center mb-10 border-b-2 border-gray-200 pb-6">
         <div className="flex items-center gap-6">
           <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center justify-center">
@@ -119,10 +121,26 @@ export default function Supervisor() {
         </div>
       </header>
 
+      {/* --- NEW QUICK STATS BAR --- */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div className="bg-blue-900 text-white p-6 rounded-2xl shadow-lg transform hover:scale-[1.02] transition-transform">
+          <p className="text-blue-200 text-xs font-black uppercase tracking-widest">Total Active Students</p>
+          <h2 className="text-4xl font-black mt-1">{totalStudents}</h2>
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100 border-b-4 border-orange-500">
+          <p className="text-gray-400 text-xs font-black uppercase tracking-widest">Pending Reviews</p>
+          <h2 className="text-4xl font-black mt-1 text-orange-600">{pendingLogs.length}</h2>
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100 border-b-4 border-purple-600">
+          <p className="text-gray-400 text-xs font-black uppercase tracking-widest">Total Hours Approved</p>
+          <h2 className="text-4xl font-black mt-1 text-purple-700">{totalApprovedHours}h</h2>
+        </div>
+      </div>
+
       {/* OVERALL STUDENT PROGRESS */}
       <div className="bg-white p-6 rounded-lg shadow-md mb-8 border-t-4 border-blue-600">
         <h2 className="text-xl font-bold mb-4 text-blue-900 flex items-center gap-2">
-          📊 Overall Student Progress
+          📊 Individual Progress
           {pendingLogs.length > 0 && (
             <span className="text-xs font-normal text-red-500 animate-pulse bg-red-50 px-2 py-1 rounded-full border border-red-100 italic">
               New submissions pending
@@ -137,7 +155,6 @@ export default function Supervisor() {
               <div key={studentEmail} className="border p-4 rounded-lg bg-gray-50 shadow-inner hover:border-blue-300 transition-colors">
                 <p className="font-bold text-gray-700 truncate text-lg">{formatName(studentEmail)}</p>
                 <p className="text-[10px] text-gray-400 mb-2 truncate italic">{studentEmail}</p>
-                
                 <div className="flex justify-between text-sm my-2">
                   <span>Approved: <b>{data.approved}h</b></span>
                   <span className={data.pending > 0 ? "text-orange-600 font-bold" : "text-gray-500"}>
