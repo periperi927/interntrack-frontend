@@ -76,7 +76,7 @@ export default function Supervisor() {
               Admin Portal
               {/* --- NEW: BOUNCING NOTIFICATION BADGE --- */}
               {pendingLogs.length > 0 && (
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-[12px] font-bold text-white animate-bounce shadow-lg">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-[14px] font-black text-white shadow-xl ring-4 ring-white animate-bounce">
                   {pendingLogs.length}
                 </span>
               )}
@@ -217,3 +217,4 @@ export default function Supervisor() {
     </div>
   );
 }
+
