@@ -4,7 +4,7 @@ import axios from 'axios';
 
 export default function Supervisor() {
   const [logs, setLogs] = useState([]);
-  const [searchTerm, setSearchTerm] = useState(''); // New state for search
+  const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => { fetchLogs(); }, []);
@@ -48,7 +48,6 @@ export default function Supervisor() {
     document.body.removeChild(link);
   };
 
-  // --- SEARCH LOGIC ---
   const filteredLogs = logs.filter(log => 
     log.student.toLowerCase().includes(searchTerm.toLowerCase()) ||
     log.description.toLowerCase().includes(searchTerm.toLowerCase())
@@ -67,62 +66,79 @@ export default function Supervisor() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-8 font-sans">
-     <header className="flex justify-between items-center mb-10 border-b-2 border-gray-200 pb-6">
-  <div className="flex items-center gap-6">
-    {/* This white box creates the 'badge' look you see in professional apps */}
-    <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center justify-center">
-      <img 
-        src="/logo.png" 
-        alt="InternTrack Logo" 
-        className="w-44 h-auto object-contain" 
-      />
-    </div>
-    <div>
-      <h1 className="text-4xl font-extrabold text-blue-900 tracking-tight">Admin Portal</h1>
-      <p className="text-gray-500 font-medium italic">Review and approve student hours</p>
-    </div>
-  </div>
+      <header className="flex justify-between items-center mb-10 border-b-2 border-gray-200 pb-6">
+        <div className="flex items-center gap-6">
+          <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center justify-center">
+            <img src="/logo.png" alt="InternTrack Logo" className="w-44 h-auto object-contain" />
+          </div>
+          <div className="relative">
+            <h1 className="text-4xl font-extrabold text-blue-900 tracking-tight flex items-center gap-3">
+              Admin Portal
+              {/* --- NEW: BOUNCING NOTIFICATION BADGE --- */}
+              {pendingLogs.length > 0 && (
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-[12px] font-bold text-white animate-bounce shadow-lg">
+                  {pendingLogs.length}
+                </span>
+              )}
+            </h1>
+            <p className="text-gray-500 font-medium italic">Review and approve student hours</p>
+          </div>
+        </div>
 
-  <div className="flex items-center gap-4">
-    {/* THE SEARCH BAR */}
-    <div className="relative">
-      <input 
-        type="text" 
-        placeholder="Search student or task..." 
-        className="pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none w-72 shadow-sm transition-all"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-      />
-      <span className="absolute left-3 top-2.5 opacity-40 text-lg">🔍</span>
-    </div>
-
-    <button 
-      onClick={() => { localStorage.removeItem('userEmail'); navigate('/'); }} 
-      className="bg-red-50 text-red-600 px-6 py-2 rounded-full font-bold hover:bg-red-600 hover:text-white transition-all duration-300 shadow-sm border border-red-100"
-    >
-      Logout
-    </button>
-  </div>
-</header>
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <input 
+              type="text" 
+              placeholder="Search student or task..." 
+              className="pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none w-72 shadow-sm transition-all"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <span className="absolute left-3 top-2.5 opacity-40 text-lg">🔍</span>
+          </div>
+          <button 
+            onClick={() => { localStorage.removeItem('userEmail'); navigate('/'); }} 
+            className="bg-red-50 text-red-600 px-6 py-2 rounded-full font-bold hover:bg-red-600 hover:text-white transition-all duration-300 shadow-sm border border-red-100"
+          >
+            Logout
+          </button>
+        </div>
+      </header>
 
       {/* OVERALL STUDENT PROGRESS */}
       <div className="bg-white p-6 rounded-lg shadow-md mb-8 border-t-4 border-blue-600">
-        <h2 className="text-xl font-bold mb-4 text-blue-900">📊 Overall Student Progress</h2>
+        <h2 className="text-xl font-bold mb-4 text-blue-900 flex items-center gap-2">
+          📊 Overall Student Progress
+          {/* --- NEW: ATTENTION PULSE --- */}
+          {pendingLogs.length > 0 && (
+            <span className="text-xs font-normal text-red-500 animate-pulse bg-red-50 px-2 py-1 rounded-full border border-red-100 italic">
+              New submissions pending
+            </span>
+          )}
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Object.keys(studentSummaries).map(studentEmail => {
             const data = studentSummaries[studentEmail];
             const percent = Math.min((data.approved / 600) * 100, 100).toFixed(1);
             return (
-              <div key={studentEmail} className="border p-4 rounded-lg bg-gray-50 shadow-inner">
+              <div key={studentEmail} className="border p-4 rounded-lg bg-gray-50 shadow-inner hover:border-blue-300 transition-colors">
                 <p className="font-bold text-gray-700 truncate">{studentEmail}</p>
                 <div className="flex justify-between text-sm my-2">
                   <span>Approved: <b>{data.approved}h</b></span>
-                  <span>Pending: <b className="text-yellow-600">{data.pending}h</b></span>
+                  <span className={data.pending > 0 ? "text-orange-600 font-bold" : "text-gray-500"}>
+                    Pending: <b>{data.pending}h</b>
+                  </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-green-500 h-2 rounded-full" style={{ width: `${percent}%` }}></div>
+                  {/* --- NEW: COLOR SHIFT AT 100% --- */}
+                  <div 
+                    className={`h-2 rounded-full transition-all duration-700 ${Number(percent) >= 100 ? 'bg-purple-600' : 'bg-green-500'}`} 
+                    style={{ width: `${percent}%` }}
+                  ></div>
                 </div>
-                <p className="text-[10px] text-right mt-1 font-bold text-green-600">{percent}% Complete</p>
+                <p className={`text-[10px] text-right mt-1 font-bold ${Number(percent) >= 100 ? 'text-purple-600' : 'text-green-600'}`}>
+                   {percent}% Complete
+                </p>
               </div>
             );
           })}
@@ -143,17 +159,21 @@ export default function Supervisor() {
               </tr>
             </thead>
             <tbody>
-              {pendingLogs.map((log) => (
-                <tr key={log._id} className="hover:bg-gray-50 transition">
-                  <td className="p-3 border-b text-sm">{new Date(log.date).toLocaleDateString()}</td>
-                  <td className="p-3 border-b font-semibold">{log.student}</td>
-                  <td className="p-3 border-b font-bold text-blue-700">{log.hours}h</td>
-                  <td className="p-3 border-b text-center flex justify-center gap-2">
-                    <button onClick={() => updateStatus(log._id, 'Approved')} className="bg-green-500 text-white px-4 py-1 rounded-full text-xs font-bold hover:bg-green-600 shadow-md">Approve</button>
-                    <button onClick={() => updateStatus(log._id, 'Rejected')} className="bg-red-500 text-white px-4 py-1 rounded-full text-xs font-bold hover:bg-red-600 shadow-md">Reject</button>
-                  </td>
-                </tr>
-              ))}
+              {pendingLogs.length === 0 ? (
+                <tr><td colSpan="4" className="p-10 text-center text-gray-400 italic">Everything is up to date!</td></tr>
+              ) : (
+                pendingLogs.map((log) => (
+                  <tr key={log._id} className="hover:bg-gray-50 transition">
+                    <td className="p-3 border-b text-sm">{new Date(log.date).toLocaleDateString()}</td>
+                    <td className="p-3 border-b font-semibold">{log.student}</td>
+                    <td className="p-3 border-b font-bold text-blue-700">{log.hours}h</td>
+                    <td className="p-3 border-b text-center flex justify-center gap-2">
+                      <button onClick={() => updateStatus(log._id, 'Approved')} className="bg-green-500 text-white px-4 py-1 rounded-full text-xs font-bold hover:bg-green-600 shadow-md">Approve</button>
+                      <button onClick={() => updateStatus(log._id, 'Rejected')} className="bg-red-500 text-white px-4 py-1 rounded-full text-xs font-bold hover:bg-red-600 shadow-md">Reject</button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -197,5 +217,3 @@ export default function Supervisor() {
     </div>
   );
 }
-
-
