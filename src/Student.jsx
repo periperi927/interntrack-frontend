@@ -64,13 +64,22 @@ export default function Student() {
   const goal = 600;
   const progressPercentage = Math.min((approvedHours / goal) * 100, 100);
 
+  // --- NEW REMAINING HOURS CALCULATION ---
+  const remainingHours = Math.max(goal - approvedHours, 0);
+
+  // --- DYNAMIC PROGRESS BAR COLOR ---
+  const getProgressBarColor = () => {
+    if (progressPercentage >= 100) return 'bg-purple-600 shadow-[0_0_15px_rgba(147,51,234,0.5)]';
+    if (progressPercentage >= 80) return 'bg-green-500';
+    if (progressPercentage >= 50) return 'bg-blue-400';
+    return 'bg-blue-600';
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 p-8 font-sans">
-      {/* FIXED HEADER SECTION */}
       <header className="flex justify-between items-center mb-10 border-b-2 border-gray-200 pb-6">
         <div className="flex items-center gap-6">
           <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-100">
-            {/* Tag was closed correctly here */}
             <img src="/logo.png" alt="InternTrack Logo" className="w-40 h-auto object-contain" />
           </div>
           <div>
@@ -84,24 +93,45 @@ export default function Student() {
         }} className="text-red-500 hover:text-red-700 font-bold transition">Logout</button>
       </header>
 
-      {/* STATS WIDGETS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      {/* STATS WIDGETS - Updated to 4 Columns */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
-          <p className="text-sm text-gray-500 uppercase font-bold">My Approved Hours</p>
+          <p className="text-sm text-gray-500 uppercase font-bold">Approved Hours</p>
           <h3 className="text-3xl font-bold text-blue-900">{approvedHours} <span className="text-lg text-gray-400">/ {goal}</span></h3>
         </div>
+        
         <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-yellow-500">
-          <p className="text-sm text-gray-500 uppercase font-bold">My Pending Approval</p>
-          <h3 className="text-3xl font-bold text-yellow-600">{pendingHours} hrs</h3>
+          <p className="text-sm text-gray-500 uppercase font-bold">Pending Approval</p>
+          <h3 className="text-3xl font-bold text-yellow-600">{pendingHours} <span className="text-lg text-gray-400">hrs</span></h3>
         </div>
+
+        {/* NEW REMAINING HOURS WIDGET */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-purple-500">
+          <p className="text-sm text-gray-500 uppercase font-bold">Remaining</p>
+          <h3 className="text-3xl font-bold text-purple-900">{remainingHours} <span className="text-lg text-gray-400">hrs</span></h3>
+        </div>
+
         <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
-          <p className="text-sm text-gray-500 uppercase font-bold">My Completion</p>
+          <p className="text-sm text-gray-500 uppercase font-bold">Completion</p>
           <h3 className="text-3xl font-bold text-green-600">{progressPercentage.toFixed(1)}%</h3>
         </div>
       </div>
 
+      {/* DYNAMIC PROGRESS BAR */}
+      <div className="bg-white p-6 rounded-xl shadow-sm mb-8">
+        <div className="flex justify-between mb-2">
+          <span className="font-bold text-gray-700">OJT Progress</span>
+          <span className="font-bold text-blue-600">{approvedHours} / {goal} Hours</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+          <div 
+            className={`${getProgressBarColor()} h-4 rounded-full transition-all duration-1000 ease-in-out`} 
+            style={{ width: `${progressPercentage}%` }}
+          ></div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* FORM */}
         <div className="lg:col-span-1 bg-white p-6 rounded-lg shadow-md h-fit">
           <h2 className="text-xl font-bold mb-4 border-b pb-2">Submit Hours</h2>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -113,7 +143,6 @@ export default function Student() {
           </form>
         </div>
 
-        {/* TABLE */}
         <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-bold mb-4 border-b pb-2">My History</h2>
           <div className="overflow-x-auto">
@@ -129,7 +158,7 @@ export default function Student() {
               </thead>
               <tbody>
                 {myLogs.map((log) => (
-                  <tr key={log._id} className="hover:bg-gray-50">
+                  <tr key={log._id} className="hover:bg-gray-50 transition">
                     <td className="p-3 border-b text-sm">{new Date(log.date).toLocaleDateString()}</td>
                     <td className="p-3 border-b font-bold">{log.hours}h</td>
                     <td className="p-3 border-b text-sm text-gray-600">{log.description}</td>
