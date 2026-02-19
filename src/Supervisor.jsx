@@ -18,12 +18,18 @@ export default function Supervisor() {
     }
   };
 
-  // --- NEW HELPER: TURNS EMAIL INTO FIRST NAME ---
+  // --- HELPER: TURNS EMAIL INTO FIRST NAME ---
   const formatName = (email) => {
     if (!email) return "Unknown";
-    const namePart = email.split('@')[0]; // takes everything before @
-    const firstName = namePart.split('.')[0]; // takes everything before first dot if it exists
+    const namePart = email.split('@')[0];
+    const firstName = namePart.split('.')[0];
     return firstName.charAt(0).toUpperCase() + firstName.slice(1);
+  };
+
+  // --- NEW HELPER: FORMATS THE CLOCK TIME ---
+  const formatTime = (dateString) => {
+    const options = { hour: '2-digit', minute: '2-digit', hour12: true };
+    return new Date(dateString).toLocaleTimeString([], options);
   };
 
   const updateStatus = async (id, newStatus) => {
@@ -37,9 +43,10 @@ export default function Supervisor() {
 
   const downloadCSV = () => {
     const historyLogs = filteredLogs.filter(log => log.status !== 'Pending');
-    const headers = ["Date", "Student", "Hours", "Task Description", "Status"];
+    const headers = ["Date", "Time", "Student", "Hours", "Task Description", "Status"];
     const rows = historyLogs.map(log => [
       new Date(log.date).toLocaleDateString(),
+      formatTime(log.date),
       log.student,
       log.hours,
       log.description.replace(/,/g, " "),
@@ -128,7 +135,6 @@ export default function Supervisor() {
             const percent = Math.min((data.approved / 600) * 100, 100).toFixed(1);
             return (
               <div key={studentEmail} className="border p-4 rounded-lg bg-gray-50 shadow-inner hover:border-blue-300 transition-colors">
-                {/* --- DISPLAYING FIRST NAME --- */}
                 <p className="font-bold text-gray-700 truncate text-lg">{formatName(studentEmail)}</p>
                 <p className="text-[10px] text-gray-400 mb-2 truncate italic">{studentEmail}</p>
                 
@@ -159,8 +165,9 @@ export default function Supervisor() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 text-gray-700">
+              <tr className="bg-gray-50 text-gray-700 text-sm">
                 <th className="p-3 border-b">Date</th>
+                <th className="p-3 border-b">Time</th>
                 <th className="p-3 border-b">Student</th>
                 <th className="p-3 border-b">Hours</th>
                 <th className="p-3 border-b text-center">Action</th>
@@ -168,15 +175,15 @@ export default function Supervisor() {
             </thead>
             <tbody>
               {pendingLogs.length === 0 ? (
-                <tr><td colSpan="4" className="p-10 text-center text-gray-400 italic">Everything is up to date!</td></tr>
+                <tr><td colSpan="5" className="p-10 text-center text-gray-400 italic">Everything is up to date!</td></tr>
               ) : (
                 pendingLogs.map((log) => (
-                  <tr key={log._id} className="hover:bg-gray-50 transition">
-                    <td className="p-3 border-b text-sm">{new Date(log.date).toLocaleDateString()}</td>
-                    {/* --- DISPLAYING FIRST NAME --- */}
-                    <td className="p-3 border-b font-semibold text-blue-900">{formatName(log.student)}</td>
-                    <td className="p-3 border-b font-bold text-blue-700">{log.hours}h</td>
-                    <td className="p-3 border-b text-center flex justify-center gap-2">
+                  <tr key={log._id} className="hover:bg-gray-50 transition border-b last:border-0">
+                    <td className="p-3 text-sm">{new Date(log.date).toLocaleDateString()}</td>
+                    <td className="p-3 text-sm text-blue-500 font-medium">{formatTime(log.date)}</td>
+                    <td className="p-3 font-semibold text-blue-900">{formatName(log.student)}</td>
+                    <td className="p-3 font-bold text-blue-700">{log.hours}h</td>
+                    <td className="p-3 text-center flex justify-center gap-2">
                       <button onClick={() => updateStatus(log._id, 'Approved')} className="bg-green-500 text-white px-4 py-1 rounded-full text-xs font-bold hover:bg-green-600 shadow-md">Approve</button>
                       <button onClick={() => updateStatus(log._id, 'Rejected')} className="bg-red-500 text-white px-4 py-1 rounded-full text-xs font-bold hover:bg-red-600 shadow-md">Reject</button>
                     </td>
@@ -201,6 +208,7 @@ export default function Supervisor() {
             <thead>
               <tr className="bg-gray-50 text-gray-600 text-sm">
                 <th className="p-3 border-b">Date</th>
+                <th className="p-3 border-b">Time</th>
                 <th className="p-3 border-b">Student</th>
                 <th className="p-3 border-b">Hours</th>
                 <th className="p-3 border-b">Status</th>
@@ -210,7 +218,7 @@ export default function Supervisor() {
               {historyLogs.map((log) => (
                 <tr key={log._id} className="border-b last:border-0 hover:bg-gray-50/50">
                   <td className="p-3 text-sm text-gray-500">{new Date(log.date).toLocaleDateString()}</td>
-                  {/* --- DISPLAYING FIRST NAME --- */}
+                  <td className="p-3 text-sm text-blue-400 italic">{formatTime(log.date)}</td>
                   <td className="p-3 text-sm font-medium">{formatName(log.student)}</td>
                   <td className="p-3 text-sm font-semibold">{log.hours}h</td>
                   <td className="p-3">
