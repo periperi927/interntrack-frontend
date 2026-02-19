@@ -18,6 +18,14 @@ export default function Supervisor() {
     }
   };
 
+  // --- NEW HELPER: TURNS EMAIL INTO FIRST NAME ---
+  const formatName = (email) => {
+    if (!email) return "Unknown";
+    const namePart = email.split('@')[0]; // takes everything before @
+    const firstName = namePart.split('.')[0]; // takes everything before first dot if it exists
+    return firstName.charAt(0).toUpperCase() + firstName.slice(1);
+  };
+
   const updateStatus = async (id, newStatus) => {
     try {
       await axios.put(`https://interntrack-api.onrender.com/api/logs/${id}`, { status: newStatus });
@@ -74,7 +82,6 @@ export default function Supervisor() {
           <div className="relative">
             <h1 className="text-4xl font-extrabold text-blue-900 tracking-tight flex items-center gap-3">
               Admin Portal
-              {/* --- NEW: BOUNCING NOTIFICATION BADGE --- */}
               {pendingLogs.length > 0 && (
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-[14px] font-black text-white shadow-xl ring-4 ring-white animate-bounce">
                   {pendingLogs.length}
@@ -109,7 +116,6 @@ export default function Supervisor() {
       <div className="bg-white p-6 rounded-lg shadow-md mb-8 border-t-4 border-blue-600">
         <h2 className="text-xl font-bold mb-4 text-blue-900 flex items-center gap-2">
           📊 Overall Student Progress
-          {/* --- NEW: ATTENTION PULSE --- */}
           {pendingLogs.length > 0 && (
             <span className="text-xs font-normal text-red-500 animate-pulse bg-red-50 px-2 py-1 rounded-full border border-red-100 italic">
               New submissions pending
@@ -122,7 +128,10 @@ export default function Supervisor() {
             const percent = Math.min((data.approved / 600) * 100, 100).toFixed(1);
             return (
               <div key={studentEmail} className="border p-4 rounded-lg bg-gray-50 shadow-inner hover:border-blue-300 transition-colors">
-                <p className="font-bold text-gray-700 truncate">{studentEmail}</p>
+                {/* --- DISPLAYING FIRST NAME --- */}
+                <p className="font-bold text-gray-700 truncate text-lg">{formatName(studentEmail)}</p>
+                <p className="text-[10px] text-gray-400 mb-2 truncate italic">{studentEmail}</p>
+                
                 <div className="flex justify-between text-sm my-2">
                   <span>Approved: <b>{data.approved}h</b></span>
                   <span className={data.pending > 0 ? "text-orange-600 font-bold" : "text-gray-500"}>
@@ -130,7 +139,6 @@ export default function Supervisor() {
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  {/* --- NEW: COLOR SHIFT AT 100% --- */}
                   <div 
                     className={`h-2 rounded-full transition-all duration-700 ${Number(percent) >= 100 ? 'bg-purple-600' : 'bg-green-500'}`} 
                     style={{ width: `${percent}%` }}
@@ -165,7 +173,8 @@ export default function Supervisor() {
                 pendingLogs.map((log) => (
                   <tr key={log._id} className="hover:bg-gray-50 transition">
                     <td className="p-3 border-b text-sm">{new Date(log.date).toLocaleDateString()}</td>
-                    <td className="p-3 border-b font-semibold">{log.student}</td>
+                    {/* --- DISPLAYING FIRST NAME --- */}
+                    <td className="p-3 border-b font-semibold text-blue-900">{formatName(log.student)}</td>
                     <td className="p-3 border-b font-bold text-blue-700">{log.hours}h</td>
                     <td className="p-3 border-b text-center flex justify-center gap-2">
                       <button onClick={() => updateStatus(log._id, 'Approved')} className="bg-green-500 text-white px-4 py-1 rounded-full text-xs font-bold hover:bg-green-600 shadow-md">Approve</button>
@@ -201,7 +210,8 @@ export default function Supervisor() {
               {historyLogs.map((log) => (
                 <tr key={log._id} className="border-b last:border-0 hover:bg-gray-50/50">
                   <td className="p-3 text-sm text-gray-500">{new Date(log.date).toLocaleDateString()}</td>
-                  <td className="p-3 text-sm">{log.student}</td>
+                  {/* --- DISPLAYING FIRST NAME --- */}
+                  <td className="p-3 text-sm font-medium">{formatName(log.student)}</td>
                   <td className="p-3 text-sm font-semibold">{log.hours}h</td>
                   <td className="p-3">
                     <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${log.status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
@@ -217,4 +227,3 @@ export default function Supervisor() {
     </div>
   );
 }
-
