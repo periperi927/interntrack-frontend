@@ -8,6 +8,7 @@ export default function Student() {
   const navigate = useNavigate();
 
   const currentUserEmail = localStorage.getItem('userEmail') || 'Guest';
+  const firstName = currentUserEmail.split('@')[0].charAt(0).toUpperCase() + currentUserEmail.split('@')[0].slice(1);
 
   useEffect(() => {
     fetchLogs();
