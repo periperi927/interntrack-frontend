@@ -6,9 +6,10 @@ export default function Supervisor() {
   const [logs, setLogs] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // --- STATE MANAGEMENT (Nothing removed) ---
+  // --- STATE MANAGEMENT ---
   const [modal, setModal] = useState({ show: false, logId: null, action: '' });
-  const [selectedStudent, setSelectedStudent] = useState(null); // For Student Detail View
+  const [selectedStudent, setSelectedStudent] = useState(null); 
+  const [innerSearch, setInnerSearch] = useState(''); // NEW: Search for inside the detail modal
   
   const navigate = useNavigate();
 
@@ -47,7 +48,7 @@ export default function Supervisor() {
 
   // --- ACTION HANDLERS ---
   const openConfirmModal = (e, id, action) => {
-    e.stopPropagation(); // Prevents opening the student detail modal
+    e.stopPropagation(); 
     setModal({ show: true, logId: id, action: action });
   };
 
@@ -123,7 +124,7 @@ export default function Supervisor() {
         </div>
       )}
 
-      {/* --- STUDENT DETAIL MODAL --- */}
+      {/* --- STUDENT DETAIL MODAL WITH INTERNAL SEARCH --- */}
       {selectedStudent && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[90] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-300">
@@ -132,24 +133,39 @@ export default function Supervisor() {
                 <h2 className="text-2xl font-black">{formatName(selectedStudent)}'s Records</h2>
                 <p className="text-blue-200 text-xs">{selectedStudent}</p>
               </div>
-              <button onClick={() => setSelectedStudent(null)} className="bg-white/10 hover:bg-white/20 p-2 rounded-full transition text-2xl px-4">✕</button>
+              <div className="flex items-center gap-4">
+                {/* INNER SEARCH BAR */}
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    placeholder="Search tasks..." 
+                    className="bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-sm focus:bg-white focus:text-gray-800 outline-none transition-all w-48"
+                    value={innerSearch}
+                    onChange={(e) => setInnerSearch(e.target.value)}
+                  />
+                </div>
+                <button onClick={() => {setSelectedStudent(null); setInnerSearch('');}} className="bg-white/10 hover:bg-white/20 p-2 rounded-full transition px-4">✕</button>
+              </div>
             </div>
-            <div className="overflow-y-auto p-6 flex-1">
+            <div className="overflow-y-auto p-6 flex-1 bg-white">
               <table className="w-full text-left">
-                <thead className="sticky top-0 bg-white shadow-sm">
+                <thead className="sticky top-0 bg-white shadow-sm z-10">
                   <tr className="text-gray-400 text-[10px] uppercase font-black">
-                    <th className="p-3">Date</th>
-                    <th className="p-3">Hours</th>
-                    <th className="p-3">Description</th>
-                    <th className="p-3">Status</th>
+                    <th className="p-3 border-b">Date</th>
+                    <th className="p-3 border-b">Hours</th>
+                    <th className="p-3 border-b">Task Description</th>
+                    <th className="p-3 border-b">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.filter(l => l.student === selectedStudent).sort((a,b) => new Date(b.date) - new Date(a.date)).map(log => (
-                    <tr key={log._id} className="border-b last:border-0 hover:bg-gray-50">
+                  {logs
+                    .filter(l => l.student === selectedStudent && l.description.toLowerCase().includes(innerSearch.toLowerCase()))
+                    .sort((a,b) => new Date(b.date) - new Date(a.date))
+                    .map(log => (
+                    <tr key={log._id} className="border-b last:border-0 hover:bg-gray-50 transition">
                       <td className="p-3 text-sm">{new Date(log.date).toLocaleDateString()}</td>
                       <td className="p-3 text-sm font-bold text-blue-900">{log.hours}h</td>
-                      <td className="p-3 text-sm text-gray-600 max-w-xs truncate">{log.description}</td>
+                      <td className="p-3 text-sm text-gray-600 max-w-md">{log.description}</td>
                       <td className="p-3">
                         <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${log.status === 'Approved' ? 'bg-green-100 text-green-700' : log.status === 'Pending' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
                           {log.status}
@@ -157,6 +173,9 @@ export default function Supervisor() {
                       </td>
                     </tr>
                   ))}
+                  {logs.filter(l => l.student === selectedStudent && l.description.toLowerCase().includes(innerSearch.toLowerCase())).length === 0 && (
+                    <tr><td colSpan="4" className="p-10 text-center text-gray-400 italic">No matching tasks found.</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -179,7 +198,7 @@ export default function Supervisor() {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <input type="text" placeholder="Search..." className="pl-4 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 w-72 shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          <input type="text" placeholder="Search dashboard..." className="pl-4 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 w-72 shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           <button onClick={() => { localStorage.removeItem('userEmail'); navigate('/'); }} className="bg-red-50 text-red-600 px-6 py-2 rounded-full font-bold hover:bg-red-600 hover:text-white transition shadow-sm border border-red-100">Logout</button>
         </div>
       </header>
