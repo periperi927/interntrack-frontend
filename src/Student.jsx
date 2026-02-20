@@ -9,7 +9,6 @@ export default function Student() {
 
   const currentUserEmail = localStorage.getItem('userEmail') || 'Guest';
 
-  // --- NEW HELPER: TURNS EMAIL INTO FIRST NAME ---
   const formatName = (email) => {
     if (!email || email === 'Guest') return "Student";
     const namePart = email.split('@')[0]; 
@@ -71,7 +70,8 @@ export default function Student() {
     .filter(log => log.status === 'Pending')
     .reduce((sum, log) => sum + Number(log.hours), 0);
 
-  const goal = 600;
+  // --- TARGET UPDATED TO 300 ---
+  const goal = 300;
   const progressPercentage = Math.min((approvedHours / goal) * 100, 100);
   const remainingHours = Math.max(goal - approvedHours, 0);
 
@@ -90,7 +90,6 @@ export default function Student() {
             <img src="/logo.png" alt="InternTrack Logo" className="w-40 h-auto object-contain" />
           </div>
           <div>
-            {/* --- UPDATED TO SHOW NAME --- */}
             <h1 className="text-4xl font-extrabold text-blue-900 tracking-tight">Student Portal</h1>
             <p className="text-gray-600 italic font-medium">Welcome back, <span className="text-blue-600 font-bold">{studentName}</span>!</p>
           </div>
@@ -136,6 +135,9 @@ export default function Student() {
             style={{ width: `${progressPercentage}%` }}
           ></div>
         </div>
+        {progressPercentage >= 100 && (
+            <p className="text-center text-purple-600 font-black text-xs mt-3 uppercase tracking-widest animate-pulse">🎉 Target Requirement Met! 🎉</p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
