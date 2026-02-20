@@ -55,13 +55,11 @@ export default function Supervisor() {
   const confirmAction = async () => {
     try {
       if (modal.isBulk) {
-        // Bulk Approve Logic
         const studentPendingLogs = logs.filter(l => l.student === selectedStudent && l.status === 'Pending');
         await Promise.all(studentPendingLogs.map(log => 
           axios.put(`https://interntrack-api.onrender.com/api/logs/${log._id}`, { status: 'Approved' })
         ));
       } else {
-        // Single Action Logic
         await axios.put(`https://interntrack-api.onrender.com/api/logs/${modal.logId}`, { status: modal.action });
       }
       setModal({ show: false, logId: null, action: '', isBulk: false });
@@ -101,6 +99,7 @@ export default function Supervisor() {
     document.body.removeChild(link);
   };
 
+  // --- DATA LOGIC ---
   const filteredLogs = logs.filter(log => 
     log.student.toLowerCase().includes(searchTerm.toLowerCase()) ||
     log.description.toLowerCase().includes(searchTerm.toLowerCase())
@@ -109,12 +108,13 @@ export default function Supervisor() {
   const studentSummaries = filteredLogs.reduce((acc, log) => {
     const student = log.student;
     if (!acc[student]) {
-      acc[student] = { approved: 0, pending: 0, lastDate: log.date };
+      acc[student] = { approved: 0, pending: 0, lastDate: log.date, lastTask: log.description };
     }
     if (log.status === 'Approved') acc[student].approved += Number(log.hours);
     if (log.status === 'Pending') acc[student].pending += Number(log.hours);
     if (new Date(log.date) > new Date(acc[student].lastDate)) {
       acc[student].lastDate = log.date;
+      acc[student].lastTask = log.description;
     }
     return acc;
   }, {});
@@ -123,8 +123,6 @@ export default function Supervisor() {
   const historyLogs = filteredLogs.filter(log => log.status !== 'Pending');
   const totalStudents = Object.keys(studentSummaries).length;
   const totalApprovedHours = logs.filter(l => l.status === 'Approved').reduce((sum, l) => sum + Number(l.hours), 0);
-
-  // Helper for Student Detail Modal
   const currentStudentPendingCount = logs.filter(l => l.student === selectedStudent && l.status === 'Pending').length;
 
   return (
@@ -160,41 +158,22 @@ export default function Supervisor() {
                 <div className="flex items-center gap-2">
                     <p className="text-blue-200 text-xs">{selectedStudent}</p>
                     {currentStudentPendingCount > 0 && (
-                        <button 
-                            onClick={(e) => openConfirmModal(e, null, 'Approved', true)}
-                            className="bg-orange-500 hover:bg-orange-600 text-white text-[10px] px-2 py-0.5 rounded font-black uppercase transition animate-pulse"
-                        >
-                            Bulk Approve ({currentStudentPendingCount})
-                        </button>
+                        <button onClick={(e) => openConfirmModal(e, null, 'Approved', true)} className="bg-orange-500 hover:bg-orange-600 text-white text-[10px] px-2 py-0.5 rounded font-black uppercase transition animate-pulse">Bulk Approve ({currentStudentPendingCount})</button>
                     )}
                 </div>
               </div>
-              
               <div className="flex flex-wrap items-center gap-3">
-                <select 
-                  value={statusFilter} 
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-xs text-white outline-none cursor-pointer"
-                >
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-xs text-white outline-none cursor-pointer">
                   <option className="text-gray-800" value="All">All Status</option>
                   <option className="text-gray-800" value="Approved">Approved Only</option>
                   <option className="text-gray-800" value="Pending">Pending Only</option>
                   <option className="text-gray-800" value="Rejected">Rejected Only</option>
                 </select>
-
-                <input 
-                  type="text" 
-                  placeholder="Search tasks..." 
-                  className="bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-xs focus:bg-white focus:text-gray-800 outline-none transition-all w-32 md:w-40"
-                  value={innerSearch}
-                  onChange={(e) => setInnerSearch(e.target.value)}
-                />
-
+                <input type="text" placeholder="Search tasks..." className="bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-xs focus:bg-white focus:text-gray-800 outline-none transition-all w-32 md:w-40" value={innerSearch} onChange={(e) => setInnerSearch(e.target.value)} />
                 <button onClick={() => downloadCSV(selectedStudent)} className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-full text-xs font-bold transition">📥 Download</button>
                 <button onClick={() => {setSelectedStudent(null); setInnerSearch(''); setStatusFilter('All');}} className="bg-white/10 hover:bg-white/20 p-2 rounded-full transition px-4 font-bold">✕</button>
               </div>
             </div>
-
             <div className="overflow-y-auto p-6 flex-1 bg-white">
               <table className="w-full text-left">
                 <thead className="sticky top-0 bg-white shadow-sm z-10">
@@ -206,20 +185,13 @@ export default function Supervisor() {
                   </tr>
                 </thead>
                 <tbody>
-                  {logs
-                    .filter(l => l.student === selectedStudent)
-                    .filter(l => statusFilter === 'All' || l.status === statusFilter)
-                    .filter(l => l.description.toLowerCase().includes(innerSearch.toLowerCase()))
-                    .sort((a,b) => new Date(b.date) - new Date(a.date))
-                    .map(log => (
+                  {logs.filter(l => l.student === selectedStudent).filter(l => statusFilter === 'All' || l.status === statusFilter).filter(l => l.description.toLowerCase().includes(innerSearch.toLowerCase())).sort((a,b) => new Date(b.date) - new Date(a.date)).map(log => (
                     <tr key={log._id} className="border-b last:border-0 hover:bg-gray-50 transition">
                       <td className="p-3 text-sm">{new Date(log.date).toLocaleDateString()}</td>
                       <td className="p-3 text-sm font-bold text-blue-900">{log.hours}h</td>
                       <td className="p-3 text-sm text-gray-600 max-w-md truncate">{log.description}</td>
                       <td className="p-3 text-right">
-                        <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${log.status === 'Approved' ? 'bg-green-100 text-green-700' : log.status === 'Pending' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
-                          {log.status}
-                        </span>
+                        <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${log.status === 'Approved' ? 'bg-green-100 text-green-700' : log.status === 'Pending' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>{log.status}</span>
                       </td>
                     </tr>
                   ))}
@@ -245,13 +217,13 @@ export default function Supervisor() {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <input type="text" placeholder="Search dashboard..." className="pl-4 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 w-72 shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          <input type="text" placeholder="Search..." className="pl-4 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 w-72 shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           <button onClick={() => { localStorage.removeItem('userEmail'); navigate('/'); }} className="bg-red-50 text-red-600 px-6 py-2 rounded-full font-bold hover:bg-red-600 hover:text-white transition shadow-sm border border-red-100">Logout</button>
         </div>
       </header>
 
       {/* STATS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div className="bg-blue-900 text-white p-6 rounded-2xl shadow-lg">
           <p className="text-blue-200 text-xs font-black uppercase tracking-widest leading-none mb-1">Total Students</p>
           <h2 className="text-4xl font-black">{totalStudents}</h2>
@@ -266,20 +238,40 @@ export default function Supervisor() {
         </div>
       </div>
 
-      {/* PROGRESS SECTION */}
+      {/* LIVE TASK FEED */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-10 overflow-hidden">
+        <div className="flex items-center gap-2 mb-3 border-b pb-2">
+            <span className="flex h-2 w-2 rounded-full bg-blue-600 animate-pulse"></span>
+            <h3 className="text-xs font-black text-gray-500 uppercase tracking-tighter">Live Activity Feed</h3>
+        </div>
+        <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+            {Object.keys(studentSummaries).map(email => (
+                <div key={email} className="min-w-[200px] bg-gray-50 p-3 rounded-lg border-l-4 border-blue-900 shadow-sm">
+                    <p className="text-[10px] font-black text-blue-900 truncate">{formatName(email)}</p>
+                    <p className="text-[11px] text-gray-600 line-clamp-1 italic">"{studentSummaries[email].lastTask}"</p>
+                </div>
+            ))}
+        </div>
+      </div>
+
+      {/* PROGRESS TRACKING */}
       <div className="bg-white p-6 rounded-lg shadow-md mb-8 border-t-4 border-blue-600">
         <h2 className="text-xl font-bold mb-4 text-blue-900 flex items-center gap-2">📊 Student Progress Tracking <span className="text-[10px] font-normal bg-blue-50 text-blue-600 px-2 py-1 rounded font-mono uppercase">Click for details</span></h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Object.keys(studentSummaries).map(studentEmail => {
             const data = studentSummaries[studentEmail];
             const percent = Math.min((data.approved / 600) * 100, 100).toFixed(1);
+            const isDone = Number(percent) >= 100;
             const isActiveToday = getTimeAgo(data.lastDate) === "Active Today";
             
             return (
-              <div key={studentEmail} onClick={() => setSelectedStudent(studentEmail)} className="border p-4 rounded-lg bg-gray-50 shadow-inner hover:border-blue-400 hover:bg-blue-50/30 transition-all cursor-pointer group">
+              <div key={studentEmail} onClick={() => setSelectedStudent(studentEmail)} className={`border p-4 rounded-lg bg-gray-50 shadow-inner hover:border-blue-400 transition-all cursor-pointer group ${isDone ? 'ring-2 ring-purple-400 bg-purple-50/30' : ''}`}>
                 <div className="flex justify-between items-start mb-2">
                     <div>
-                        <p className="font-bold text-gray-700 group-hover:text-blue-700 transition">{formatName(studentEmail)}</p>
+                        <div className="flex items-center gap-2">
+                            <p className="font-bold text-gray-700 group-hover:text-blue-700 transition">{formatName(studentEmail)}</p>
+                            {isDone && <span className="bg-purple-600 text-white text-[8px] px-1.5 py-0.5 rounded-full font-black animate-bounce">GOAL REACHED</span>}
+                        </div>
                         <p className="text-[10px] text-gray-400 italic mt-0.5">{studentEmail}</p>
                     </div>
                     <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${isActiveToday ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-gray-200 text-gray-500'}`}>
@@ -291,9 +283,9 @@ export default function Supervisor() {
                   <span className={data.pending > 0 ? "text-orange-600 font-bold" : "text-gray-500"}>Pending: <b>{data.pending}h</b></span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className={`h-2 rounded-full transition-all duration-700 ${Number(percent) >= 100 ? 'bg-purple-600' : 'bg-green-500'}`} style={{ width: `${percent}%` }}></div>
+                  <div className={`h-2 rounded-full transition-all duration-700 ${isDone ? 'bg-purple-600' : 'bg-green-500'}`} style={{ width: `${percent}%` }}></div>
                 </div>
-                <p className={`text-[10px] text-right mt-1 font-bold ${Number(percent) >= 100 ? 'text-purple-600' : 'text-green-600'}`}>{percent}% Complete</p>
+                <p className={`text-[10px] text-right mt-1 font-bold ${isDone ? 'text-purple-600' : 'text-green-600'}`}>{percent}% Complete</p>
               </div>
             );
           })}
@@ -302,7 +294,7 @@ export default function Supervisor() {
 
       {/* PENDING TABLE */}
       <div className="bg-white p-6 rounded-lg shadow-md mb-8 border-t-4 border-orange-400">
-        <h2 className="text-xl font-bold mb-4">🕒 Pending Review ({pendingLogs.length})</h2>
+        <h2 className="text-xl font-bold mb-4 text-orange-900">🕒 Pending Review ({pendingLogs.length})</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
