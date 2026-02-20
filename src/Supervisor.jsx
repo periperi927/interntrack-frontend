@@ -9,7 +9,7 @@ export default function Supervisor() {
   // --- STATE MANAGEMENT ---
   const [modal, setModal] = useState({ show: false, logId: null, action: '' });
   const [selectedStudent, setSelectedStudent] = useState(null); 
-  const [innerSearch, setInnerSearch] = useState(''); // NEW: Search for inside the detail modal
+  const [innerSearch, setInnerSearch] = useState(''); 
   
   const navigate = useNavigate();
 
@@ -62,10 +62,15 @@ export default function Supervisor() {
     }
   };
 
-  const downloadCSV = () => {
-    const historyLogs = filteredLogs.filter(log => log.status !== 'Pending');
+  // --- UPDATED DOWNLOAD LOGIC (Context Aware) ---
+  const downloadCSV = (specificStudentEmail = null) => {
+    // If a student email is passed, we only export their logs. Otherwise, we export all non-pending logs.
+    const logsToExport = specificStudentEmail 
+      ? logs.filter(log => log.student === specificStudentEmail)
+      : filteredLogs.filter(log => log.status !== 'Pending');
+
     const headers = ["Date", "Time", "Student", "Hours", "Task Description", "Status"];
-    const rows = historyLogs.map(log => [
+    const rows = logsToExport.map(log => [
       new Date(log.date).toLocaleDateString(),
       formatTime(log.date),
       log.student,
@@ -73,12 +78,17 @@ export default function Supervisor() {
       log.description.replace(/,/g, " "),
       log.status
     ]);
+
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
+    const fileName = specificStudentEmail 
+      ? `OJT_Report_${formatName(specificStudentEmail)}_${new Date().toLocaleDateString()}.csv`
+      : `OJT_Full_Report_${new Date().toLocaleDateString()}.csv`;
+
     link.setAttribute("href", url);
-    link.setAttribute("download", `OJT_Report_${new Date().toLocaleDateString()}.csv`);
+    link.setAttribute("download", fileName);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -124,7 +134,7 @@ export default function Supervisor() {
         </div>
       )}
 
-      {/* --- STUDENT DETAIL MODAL WITH INTERNAL SEARCH --- */}
+      {/* --- STUDENT DETAIL MODAL --- */}
       {selectedStudent && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[90] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-300">
@@ -134,7 +144,13 @@ export default function Supervisor() {
                 <p className="text-blue-200 text-xs">{selectedStudent}</p>
               </div>
               <div className="flex items-center gap-4">
-                {/* INNER SEARCH BAR */}
+                {/* NEW: Download SPECIFIC student report button */}
+                <button 
+                  onClick={() => downloadCSV(selectedStudent)}
+                  className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-2 shadow-inner"
+                >
+                  📥 Download Individual Report
+                </button>
                 <div className="relative">
                   <input 
                     type="text" 
@@ -173,9 +189,6 @@ export default function Supervisor() {
                       </td>
                     </tr>
                   ))}
-                  {logs.filter(l => l.student === selectedStudent && l.description.toLowerCase().includes(innerSearch.toLowerCase())).length === 0 && (
-                    <tr><td colSpan="4" className="p-10 text-center text-gray-400 italic">No matching tasks found.</td></tr>
-                  )}
                 </tbody>
               </table>
             </div>
@@ -287,11 +300,11 @@ export default function Supervisor() {
         </div>
       </div>
 
-      {/* HISTORY TABLE */}
+      {/* MAIN HISTORY TABLE */}
       <div className="bg-white p-6 rounded-lg shadow-md border-t-4 border-gray-300">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-gray-700">📜 Action History</h2>
-          <button onClick={downloadCSV} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-700 transition flex items-center gap-2 shadow-lg">📥 Download Report</button>
+          <button onClick={() => downloadCSV()} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-700 transition flex items-center gap-2 shadow-lg">📥 Download Full Report</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
