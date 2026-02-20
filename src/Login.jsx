@@ -13,7 +13,6 @@ export default function Login() {
 
   // --- CENTRALIZED ADMIN SETTING ---
   const MAIN_ADMIN_EMAIL = 'perrydumaual33@gmail.com';
-  // ---------------------------------
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,7 +24,7 @@ export default function Login() {
           lastName, 
           email, 
           password, 
-          role: 'student' // Force everyone who registers to be a student
+          role: 'student' // Everyone who registers is a student
         });
         alert('Account created! You can now log in.');
         setIsRegistering(false);
@@ -37,14 +36,15 @@ export default function Login() {
       try {
         const response = await axios.post('https://interntrack-api.onrender.com/api/login', { email, password });
         
+        // Save user info to local storage
         localStorage.setItem('userEmail', email);
         if (response.data.userName) {
             localStorage.setItem('userName', response.data.userName);
         }
 
         // --- CENTRALIZED REDIRECT LOGIC ---
-        // If the email matches the hardcoded admin email, go to Supervisor
-        if (email.toLowerCase() === MAIN_ADMIN_EMAIL.toLowerCase()) {
+        // We check the email string directly to ensure you are the only Admin
+        if (email.toLowerCase().trim() === MAIN_ADMIN_EMAIL.toLowerCase().trim()) {
           navigate('/supervisor');
         } else {
           navigate('/student');
@@ -92,10 +92,6 @@ export default function Login() {
             className="border p-3 rounded bg-gray-50 focus:outline-blue-500"
             value={password} onChange={(e) => setPassword(e.target.value)}
           />
-
-          {/* REMOVED: The select role dropdown. 
-            We now force all registrations to be 'student' in the logic above.
-          */}
           
           <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-700 transition mt-2">
             {isRegistering ? 'Register Account' : 'Login'}
@@ -105,13 +101,13 @@ export default function Login() {
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
             {isRegistering ? 'Already have an account?' : 'Need an account?'} 
-            <Link 
-              to={isRegistering ? "/" : "/register"} 
+            <button 
+              type="button"
               className="ml-1 text-blue-600 hover:underline font-semibold"
-              onClick={() => setIsRegistering(isRegistering ? false : true)}
+              onClick={() => setIsRegistering(!isRegistering)}
             >
               {isRegistering ? 'Log in here' : 'Register here'}
-            </Link>
+            </button>
           </p>
         </div>
       </div>
