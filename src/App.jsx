@@ -1,20 +1,19 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './Login';
 import Student from './Student';
 import Supervisor from './Supervisor';
+import Register from './Register'; // 1. Import the new file
 
 function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
-        {/* The first page they see (Login) */}
         <Route path="/" element={<Login />} />
-        
-        {/* The hidden dashboard pages */}
+        <Route path="/register" element={<Register />} /> {/* 2. Add this line */}
         <Route path="/student" element={<Student />} />
         <Route path="/supervisor" element={<Supervisor />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
 
