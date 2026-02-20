@@ -256,11 +256,12 @@ export default function Supervisor() {
 
       {/* PROGRESS TRACKING */}
       <div className="bg-white p-6 rounded-lg shadow-md mb-8 border-t-4 border-blue-600">
-        <h2 className="text-xl font-bold mb-4 text-blue-900 flex items-center gap-2">📊 Student Progress Tracking <span className="text-[10px] font-normal bg-blue-50 text-blue-600 px-2 py-1 rounded font-mono uppercase">Click for details</span></h2>
+        <h2 className="text-xl font-bold mb-4 text-blue-900 flex items-center gap-2">📊 Student Progress Tracking <span className="text-[10px] font-normal bg-blue-50 text-blue-600 px-2 py-1 rounded font-mono uppercase">Target: 300 Hours</span></h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Object.keys(studentSummaries).map(studentEmail => {
             const data = studentSummaries[studentEmail];
-            const percent = Math.min((data.approved / 600) * 100, 100).toFixed(1);
+            // TARGET UPDATED TO 300 HERE
+            const percent = Math.min((data.approved / 300) * 100, 100).toFixed(1);
             const isDone = Number(percent) >= 100;
             const isActiveToday = getTimeAgo(data.lastDate) === "Active Today";
             
