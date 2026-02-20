@@ -4,13 +4,13 @@ import Student from './Student';
 import Supervisor from './Supervisor';
 
 // --- THE SECURITY GUARD ---
-// This component checks if the user is the specific admin
+// This checks if the user is the specific admin before letting them in
 const AdminGuard = ({ children }) => {
   const userEmail = localStorage.getItem('userEmail');
   const MAIN_ADMIN_EMAIL = 'perrydumaual33@gmail.com';
 
   if (!userEmail || userEmail.toLowerCase() !== MAIN_ADMIN_EMAIL.toLowerCase()) {
-    // Not the admin? Send them to the login page
+    // If they are not the admin, kick them back to login
     return <Navigate to="/" replace />;
   }
 
@@ -21,13 +21,13 @@ export default function App() {
   return (
     <Router>
       <Routes>
-        {/* Public Route */}
+        {/* Public Route: The Entrance */}
         <Route path="/" element={<Login />} />
         
-        {/* Student Route (General) */}
+        {/* Student Route: General dashboard */}
         <Route path="/student" element={<Student />} />
         
-        {/* PROTECTED Admin Route */}
+        {/* Protected Admin Route: Wrapped in the Guard */}
         <Route 
           path="/supervisor" 
           element={
@@ -37,7 +37,7 @@ export default function App() {
           } 
         />
 
-        {/* Catch-all: Redirect unknown pages to Login */}
+        {/* Catch-all: Redirects any unknown URL back to Login */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
