@@ -10,6 +10,7 @@ export default function Supervisor() {
   const [modal, setModal] = useState({ show: false, logId: null, action: '' });
   const [selectedStudent, setSelectedStudent] = useState(null); 
   const [innerSearch, setInnerSearch] = useState(''); 
+  const [statusFilter, setStatusFilter] = useState('All'); // NEW: Status filter for student modal
   
   const navigate = useNavigate();
 
@@ -62,9 +63,7 @@ export default function Supervisor() {
     }
   };
 
-  // --- UPDATED DOWNLOAD LOGIC (Context Aware) ---
   const downloadCSV = (specificStudentEmail = null) => {
-    // If a student email is passed, we only export their logs. Otherwise, we export all non-pending logs.
     const logsToExport = specificStudentEmail 
       ? logs.filter(log => log.student === specificStudentEmail)
       : filteredLogs.filter(log => log.status !== 'Pending');
@@ -134,35 +133,49 @@ export default function Supervisor() {
         </div>
       )}
 
-      {/* --- STUDENT DETAIL MODAL --- */}
+      {/* --- STUDENT DETAIL MODAL WITH SEARCH & STATUS FILTER --- */}
       {selectedStudent && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[90] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-300">
-            <div className="p-6 bg-blue-900 text-white flex justify-between items-center">
+            <div className="p-6 bg-blue-900 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-black">{formatName(selectedStudent)}'s Records</h2>
                 <p className="text-blue-200 text-xs">{selectedStudent}</p>
               </div>
-              <div className="flex items-center gap-4">
-                {/* NEW: Download SPECIFIC student report button */}
-                <button 
-                  onClick={() => downloadCSV(selectedStudent)}
-                  className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-2 shadow-inner"
+              
+              <div className="flex flex-wrap items-center gap-3">
+                {/* STATUS FILTER DROPDOWN */}
+                <select 
+                  value={statusFilter} 
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-xs text-white outline-none cursor-pointer hover:bg-white/20 transition"
                 >
-                  📥 Download Individual Report
-                </button>
+                  <option className="text-gray-800" value="All">All Status</option>
+                  <option className="text-gray-800" value="Approved">Approved Only</option>
+                  <option className="text-gray-800" value="Pending">Pending Only</option>
+                  <option className="text-gray-800" value="Rejected">Rejected Only</option>
+                </select>
+
                 <div className="relative">
                   <input 
                     type="text" 
                     placeholder="Search tasks..." 
-                    className="bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-sm focus:bg-white focus:text-gray-800 outline-none transition-all w-48"
+                    className="bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-xs focus:bg-white focus:text-gray-800 outline-none transition-all w-32 md:w-40"
                     value={innerSearch}
                     onChange={(e) => setInnerSearch(e.target.value)}
                   />
                 </div>
-                <button onClick={() => {setSelectedStudent(null); setInnerSearch('');}} className="bg-white/10 hover:bg-white/20 p-2 rounded-full transition px-4">✕</button>
+
+                <button 
+                  onClick={() => downloadCSV(selectedStudent)}
+                  className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-full text-xs font-bold transition shadow-md"
+                >
+                  📥 Download
+                </button>
+                <button onClick={() => {setSelectedStudent(null); setInnerSearch(''); setStatusFilter('All');}} className="bg-white/10 hover:bg-white/20 p-2 rounded-full transition px-4 font-bold">✕</button>
               </div>
             </div>
+
             <div className="overflow-y-auto p-6 flex-1 bg-white">
               <table className="w-full text-left">
                 <thead className="sticky top-0 bg-white shadow-sm z-10">
@@ -175,7 +188,9 @@ export default function Supervisor() {
                 </thead>
                 <tbody>
                   {logs
-                    .filter(l => l.student === selectedStudent && l.description.toLowerCase().includes(innerSearch.toLowerCase()))
+                    .filter(l => l.student === selectedStudent)
+                    .filter(l => statusFilter === 'All' || l.status === statusFilter)
+                    .filter(l => l.description.toLowerCase().includes(innerSearch.toLowerCase()))
                     .sort((a,b) => new Date(b.date) - new Date(a.date))
                     .map(log => (
                     <tr key={log._id} className="border-b last:border-0 hover:bg-gray-50 transition">
@@ -189,6 +204,9 @@ export default function Supervisor() {
                       </td>
                     </tr>
                   ))}
+                  {logs.filter(l => l.student === selectedStudent && (statusFilter === 'All' || l.status === statusFilter) && l.description.toLowerCase().includes(innerSearch.toLowerCase())).length === 0 && (
+                    <tr><td colSpan="4" className="p-10 text-center text-gray-400 italic font-medium">No matching records found.</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -211,7 +229,7 @@ export default function Supervisor() {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <input type="text" placeholder="Search dashboard..." className="pl-4 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 w-72 shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          <input type="text" placeholder="Search dashboard..." className="pl-4 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 w-72 shadow-sm transition-all" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           <button onClick={() => { localStorage.removeItem('userEmail'); navigate('/'); }} className="bg-red-50 text-red-600 px-6 py-2 rounded-full font-bold hover:bg-red-600 hover:text-white transition shadow-sm border border-red-100">Logout</button>
         </div>
       </header>
@@ -219,15 +237,15 @@ export default function Supervisor() {
       {/* QUICK STATS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         <div className="bg-blue-900 text-white p-6 rounded-2xl shadow-lg hover:scale-[1.02] transition-transform">
-          <p className="text-blue-200 text-xs font-black uppercase tracking-widest">Total Students</p>
+          <p className="text-blue-200 text-xs font-black uppercase tracking-widest leading-none mb-1">Total Active Students</p>
           <h2 className="text-4xl font-black">{totalStudents}</h2>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-md border-b-4 border-orange-500 hover:scale-[1.02] transition-transform">
-          <p className="text-gray-400 text-xs font-black uppercase tracking-widest">Pending</p>
+          <p className="text-gray-400 text-xs font-black uppercase tracking-widest leading-none mb-1">Pending Reviews</p>
           <h2 className="text-4xl font-black text-orange-600">{pendingLogs.length}</h2>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-md border-b-4 border-purple-600 hover:scale-[1.02] transition-transform">
-          <p className="text-gray-400 text-xs font-black uppercase tracking-widest">Total Approved</p>
+          <p className="text-gray-400 text-xs font-black uppercase tracking-widest leading-none mb-1">Total Hours Approved</p>
           <h2 className="text-4xl font-black text-purple-700">{totalApprovedHours}h</h2>
         </div>
       </div>
@@ -246,7 +264,7 @@ export default function Supervisor() {
                 <div className="flex justify-between items-start mb-2">
                     <div>
                         <p className="font-bold text-gray-700 group-hover:text-blue-700 transition">{formatName(studentEmail)}</p>
-                        <p className="text-[10px] text-gray-400 italic">{studentEmail}</p>
+                        <p className="text-[10px] text-gray-400 italic mt-0.5">{studentEmail}</p>
                     </div>
                     <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${isActiveToday ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-gray-200 text-gray-500'}`}>
                         {getTimeAgo(data.lastDate)}
@@ -272,7 +290,7 @@ export default function Supervisor() {
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-gray-50 text-gray-700 text-sm">
+              <tr className="bg-gray-50 text-gray-700 text-sm font-bold">
                 <th className="p-3 border-b">Date / Time</th>
                 <th className="p-3 border-b">Student</th>
                 <th className="p-3 border-b">Hours</th>
