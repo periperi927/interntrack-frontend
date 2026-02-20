@@ -25,8 +25,12 @@ export default function Supervisor() {
     }
   };
 
-  const formatName = (email) => {
-    if (!email) return "Unknown";
+  // --- UPDATED NAME LOGIC ---
+  // This helper checks if the log has a studentName saved. 
+  // If not, it falls back to formatting the email.
+  const displayName = (log) => {
+    if (log.studentName) return log.studentName;
+    const email = log.student || log; // Fallback for cases where only email is passed
     const namePart = email.split('@')[0];
     const firstName = namePart.split('.')[0];
     return firstName.charAt(0).toUpperCase() + firstName.slice(1);
@@ -74,10 +78,11 @@ export default function Supervisor() {
       ? logs.filter(log => log.student === specificStudentEmail)
       : filteredLogs.filter(log => log.status !== 'Pending');
 
-    const headers = ["Date", "Time", "Student", "Hours", "Task Description", "Status"];
+    const headers = ["Date", "Time", "Student Name", "Email", "Hours", "Task Description", "Status"];
     const rows = logsToExport.map(log => [
       new Date(log.date).toLocaleDateString(),
       formatTime(log.date),
+      log.studentName || displayName(log.student),
       log.student,
       log.hours,
       log.description.replace(/,/g, " "),
@@ -89,7 +94,7 @@ export default function Supervisor() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     const fileName = specificStudentEmail 
-      ? `OJT_Report_${formatName(specificStudentEmail)}_${new Date().toLocaleDateString()}.csv`
+      ? `OJT_Report_${displayName(specificStudentEmail)}_${new Date().toLocaleDateString()}.csv`
       : `OJT_Full_Report_${new Date().toLocaleDateString()}.csv`;
 
     link.setAttribute("href", url);
@@ -101,14 +106,21 @@ export default function Supervisor() {
 
   // --- DATA LOGIC ---
   const filteredLogs = logs.filter(log => 
-    log.student.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    log.description.toLowerCase().includes(searchTerm.toLowerCase())
+    (log.studentName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (log.student.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (log.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const studentSummaries = filteredLogs.reduce((acc, log) => {
     const student = log.student;
     if (!acc[student]) {
-      acc[student] = { approved: 0, pending: 0, lastDate: log.date, lastTask: log.description };
+      acc[student] = { 
+        name: log.studentName || displayName(student),
+        approved: 0, 
+        pending: 0, 
+        lastDate: log.date, 
+        lastTask: log.description 
+      };
     }
     if (log.status === 'Approved') acc[student].approved += Number(log.hours);
     if (log.status === 'Pending') acc[student].pending += Number(log.hours);
@@ -131,7 +143,7 @@ export default function Supervisor() {
       {/* --- CONFIRMATION MODAL --- */}
       {modal.show && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border border-gray-100 animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border border-gray-100">
             <h3 className="text-xl font-bold text-blue-900 mb-2">Confirm Action</h3>
             <p className="text-gray-500 text-sm mb-6">
               {modal.isBulk 
@@ -151,10 +163,10 @@ export default function Supervisor() {
       {/* --- STUDENT DETAIL MODAL --- */}
       {selectedStudent && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[90] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-300">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="p-6 bg-blue-900 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-black">{formatName(selectedStudent)}'s Records</h2>
+                <h2 className="text-2xl font-black">{studentSummaries[selectedStudent]?.name}'s Records</h2>
                 <div className="flex items-center gap-2">
                     <p className="text-blue-200 text-xs">{selectedStudent}</p>
                     {currentStudentPendingCount > 0 && (
@@ -163,15 +175,15 @@ export default function Supervisor() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-xs text-white outline-none cursor-pointer">
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-xs text-white outline-none">
                   <option className="text-gray-800" value="All">All Status</option>
                   <option className="text-gray-800" value="Approved">Approved Only</option>
                   <option className="text-gray-800" value="Pending">Pending Only</option>
                   <option className="text-gray-800" value="Rejected">Rejected Only</option>
                 </select>
-                <input type="text" placeholder="Search tasks..." className="bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-xs focus:bg-white focus:text-gray-800 outline-none transition-all w-32 md:w-40" value={innerSearch} onChange={(e) => setInnerSearch(e.target.value)} />
+                <input type="text" placeholder="Search tasks..." className="bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-xs focus:bg-white focus:text-gray-800 outline-none w-32 md:w-40" value={innerSearch} onChange={(e) => setInnerSearch(e.target.value)} />
                 <button onClick={() => downloadCSV(selectedStudent)} className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-full text-xs font-bold transition">📥 Download</button>
-                <button onClick={() => {setSelectedStudent(null); setInnerSearch(''); setStatusFilter('All');}} className="bg-white/10 hover:bg-white/20 p-2 rounded-full transition px-4 font-bold">✕</button>
+                <button onClick={() => {setSelectedStudent(null); setInnerSearch(''); setStatusFilter('All');}} className="bg-white/10 hover:bg-white/20 p-2 rounded-full px-4 font-bold">✕</button>
               </div>
             </div>
             <div className="overflow-y-auto p-6 flex-1 bg-white">
@@ -186,7 +198,7 @@ export default function Supervisor() {
                 </thead>
                 <tbody>
                   {logs.filter(l => l.student === selectedStudent).filter(l => statusFilter === 'All' || l.status === statusFilter).filter(l => l.description.toLowerCase().includes(innerSearch.toLowerCase())).sort((a,b) => new Date(b.date) - new Date(a.date)).map(log => (
-                    <tr key={log._id} className="border-b last:border-0 hover:bg-gray-50 transition">
+                    <tr key={log._id} className="border-b hover:bg-gray-50 transition">
                       <td className="p-3 text-sm">{new Date(log.date).toLocaleDateString()}</td>
                       <td className="p-3 text-sm font-bold text-blue-900">{log.hours}h</td>
                       <td className="p-3 text-sm text-gray-600 max-w-md truncate">{log.description}</td>
@@ -217,8 +229,8 @@ export default function Supervisor() {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <input type="text" placeholder="Search..." className="pl-4 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 w-72 shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-          <button onClick={() => { localStorage.removeItem('userEmail'); navigate('/'); }} className="bg-red-50 text-red-600 px-6 py-2 rounded-full font-bold hover:bg-red-600 hover:text-white transition shadow-sm border border-red-100">Logout</button>
+          <input type="text" placeholder="Search name or task..." className="pl-4 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 w-72 shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          <button onClick={() => { localStorage.clear(); navigate('/'); }} className="bg-red-50 text-red-600 px-6 py-2 rounded-full font-bold hover:bg-red-600 hover:text-white transition shadow-sm border border-red-100">Logout</button>
         </div>
       </header>
 
@@ -247,7 +259,7 @@ export default function Supervisor() {
         <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
             {Object.keys(studentSummaries).map(email => (
                 <div key={email} className="min-w-[200px] bg-gray-50 p-3 rounded-lg border-l-4 border-blue-900 shadow-sm">
-                    <p className="text-[10px] font-black text-blue-900 truncate">{formatName(email)}</p>
+                    <p className="text-[10px] font-black text-blue-900 truncate">{studentSummaries[email].name}</p>
                     <p className="text-[11px] text-gray-600 line-clamp-1 italic">"{studentSummaries[email].lastTask}"</p>
                 </div>
             ))}
@@ -260,7 +272,6 @@ export default function Supervisor() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Object.keys(studentSummaries).map(studentEmail => {
             const data = studentSummaries[studentEmail];
-            // TARGET UPDATED TO 300 HERE
             const percent = Math.min((data.approved / 300) * 100, 100).toFixed(1);
             const isDone = Number(percent) >= 100;
             const isActiveToday = getTimeAgo(data.lastDate) === "Active Today";
@@ -270,7 +281,7 @@ export default function Supervisor() {
                 <div className="flex justify-between items-start mb-2">
                     <div>
                         <div className="flex items-center gap-2">
-                            <p className="font-bold text-gray-700 group-hover:text-blue-700 transition">{formatName(studentEmail)}</p>
+                            <p className="font-bold text-gray-700 group-hover:text-blue-700 transition">{data.name}</p>
                             {isDone && <span className="bg-purple-600 text-white text-[8px] px-1.5 py-0.5 rounded-full font-black animate-bounce">GOAL REACHED</span>}
                         </div>
                         <p className="text-[10px] text-gray-400 italic mt-0.5">{studentEmail}</p>
@@ -301,19 +312,21 @@ export default function Supervisor() {
             <thead>
               <tr className="bg-gray-50 text-gray-700 text-sm font-bold">
                 <th className="p-3 border-b">Date / Time</th>
-                <th className="p-3 border-b">Student</th>
+                <th className="p-3 border-b">Student Name</th>
+                <th className="p-3 border-b">Email</th>
                 <th className="p-3 border-b">Hours</th>
                 <th className="p-3 border-b text-center">Action</th>
               </tr>
             </thead>
             <tbody>
               {pendingLogs.length === 0 ? (
-                <tr><td colSpan="4" className="p-10 text-center text-gray-400 italic">Everything is up to date!</td></tr>
+                <tr><td colSpan="5" className="p-10 text-center text-gray-400 italic">Everything is up to date!</td></tr>
               ) : (
                 pendingLogs.map((log) => (
                   <tr key={log._id} className="hover:bg-gray-50 transition border-b last:border-0">
                     <td className="p-3 text-xs leading-tight">{new Date(log.date).toLocaleDateString()}<br/><span className="text-blue-500 font-bold">{formatTime(log.date)}</span></td>
-                    <td className="p-3 font-semibold text-blue-900">{formatName(log.student)}</td>
+                    <td className="p-3 font-semibold text-blue-900">{log.studentName || displayName(log)}</td>
+                    <td className="p-3 text-xs text-gray-400">{log.student}</td>
                     <td className="p-3 font-bold text-blue-700">{log.hours}h</td>
                     <td className="p-3 text-center flex justify-center gap-2">
                       <button onClick={(e) => openConfirmModal(e, log._id, 'Approved')} className="bg-green-500 text-white px-4 py-1.5 rounded-lg text-xs font-black shadow-md hover:bg-green-600 transition">Approve</button>
@@ -338,7 +351,7 @@ export default function Supervisor() {
             <thead>
               <tr className="bg-gray-50 text-gray-600 text-xs font-bold uppercase tracking-tight">
                 <th className="p-3 border-b">Date</th>
-                <th className="p-3 border-b">Student</th>
+                <th className="p-3 border-b">Student Name</th>
                 <th className="p-3 border-b">Hours</th>
                 <th className="p-3 border-b text-right">Status</th>
               </tr>
@@ -347,7 +360,7 @@ export default function Supervisor() {
               {historyLogs.map((log) => (
                 <tr key={log._id} className="border-b last:border-0 hover:bg-gray-50/50 transition">
                   <td className="p-3 text-sm text-gray-500">{new Date(log.date).toLocaleDateString()}</td>
-                  <td className="p-3 text-sm font-bold text-gray-800">{formatName(log.student)}</td>
+                  <td className="p-3 text-sm font-bold text-gray-800">{log.studentName || displayName(log)}</td>
                   <td className="p-3 text-sm font-black text-blue-900">{log.hours}h</td>
                   <td className="p-3 text-right"><span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${log.status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{log.status}</span></td>
                 </tr>
