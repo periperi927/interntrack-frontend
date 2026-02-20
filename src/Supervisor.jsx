@@ -16,7 +16,7 @@ export default function Supervisor() {
 
   // --- CENTRALIZED ADMIN SETTING ---
   // Must match the email you set in Login.jsx
-  const MAIN_ADMIN_EMAIL = 'your-admin-email@gmail.com'; 
+  const MAIN_ADMIN_EMAIL = 'perrydumaual33@gmail.com'; 
 
   useEffect(() => { 
     // SECURITY GUARD: Check if the logged-in user is the Main Admin
@@ -386,3 +386,4 @@ export default function Supervisor() {
     </div>
   );
 }
+
