@@ -1,20 +1,38 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './Login';
 import Student from './Student';
 import Supervisor from './Supervisor';
-import Register from './Register'; // 1. Import the new file
 
-function App() {
+// --- THE SECURITY GUARD ---
+const ProtectedAdminRoute = ({ children }) => {
+  const userEmail = localStorage.getItem('userEmail');
+  const MAIN_ADMIN_EMAIL = 'perrydumaual33@gmail.com';
+
+  if (!userEmail || userEmail.toLowerCase() !== MAIN_ADMIN_EMAIL.toLowerCase()) {
+    // If they aren't the boss, send them back to login
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+
+export default function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Login />} />
-        <Route path="/register" element={<Register />} /> {/* 2. Add this line */}
         <Route path="/student" element={<Student />} />
-        <Route path="/supervisor" element={<Supervisor />} />
+        
+        {/* WRAP THE SUPERVISOR ROUTE IN OUR GUARD */}
+        <Route 
+          path="/supervisor" 
+          element={
+            <ProtectedAdminRoute>
+              <Supervisor />
+            </ProtectedAdminRoute>
+          } 
+        />
       </Routes>
     </Router>
   );
 }
-
-export default App;
