@@ -7,7 +7,9 @@ export default function Student() {
   const [form, setForm] = useState({ hours: '', description: '' });
   const navigate = useNavigate();
 
+  // --- NAME LOGIC START ---
   const currentUserEmail = localStorage.getItem('userEmail') || 'Guest';
+  const storedName = localStorage.getItem('userName');
 
   const formatName = (email) => {
     if (!email || email === 'Guest') return "Student";
@@ -16,7 +18,9 @@ export default function Student() {
     return firstName.charAt(0).toUpperCase() + firstName.slice(1);
   };
 
-  const studentName = formatName(currentUserEmail);
+  // Prioritize the actual name from the database, fallback to email formatting
+  const studentName = storedName || formatName(currentUserEmail);
+  // --- NAME LOGIC END ---
 
   useEffect(() => {
     fetchLogs();
@@ -51,6 +55,7 @@ export default function Student() {
       await axios.post('https://interntrack-api.onrender.com/api/logs', {
         ...form,
         student: currentUserEmail,
+        studentName: studentName, // Optional: useful if you want to save the name with the log
         date: new Date()
       });
       setForm({ hours: '', description: '' }); 
@@ -70,7 +75,6 @@ export default function Student() {
     .filter(log => log.status === 'Pending')
     .reduce((sum, log) => sum + Number(log.hours), 0);
 
-  // --- TARGET UPDATED TO 300 ---
   const goal = 300;
   const progressPercentage = Math.min((approvedHours / goal) * 100, 100);
   const remainingHours = Math.max(goal - approvedHours, 0);
@@ -95,7 +99,7 @@ export default function Student() {
           </div>
         </div>
         <button onClick={() => {
-          localStorage.removeItem('userEmail');
+          localStorage.clear(); // Clears email and name on logout
           navigate('/');
         }} className="bg-white text-red-500 border border-red-100 px-6 py-2 rounded-full font-bold hover:bg-red-500 hover:text-white transition-all shadow-sm">Logout</button>
       </header>
