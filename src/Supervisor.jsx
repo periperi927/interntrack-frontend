@@ -7,10 +7,10 @@ export default function Supervisor() {
   const [searchTerm, setSearchTerm] = useState('');
   
   // --- STATE MANAGEMENT ---
-  const [modal, setModal] = useState({ show: false, logId: null, action: '' });
+  const [modal, setModal] = useState({ show: false, logId: null, action: '', isBulk: false });
   const [selectedStudent, setSelectedStudent] = useState(null); 
   const [innerSearch, setInnerSearch] = useState(''); 
-  const [statusFilter, setStatusFilter] = useState('All'); // NEW: Status filter for student modal
+  const [statusFilter, setStatusFilter] = useState('All'); 
   
   const navigate = useNavigate();
 
@@ -38,7 +38,6 @@ export default function Supervisor() {
   };
 
   const getTimeAgo = (dateString) => {
-    const logDate = new Date(dateString);
     const today = new Date();
     const diffTime = Math.abs(today.setHours(0,0,0,0) - new Date(dateString).setHours(0,0,0,0));
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
@@ -48,15 +47,24 @@ export default function Supervisor() {
   };
 
   // --- ACTION HANDLERS ---
-  const openConfirmModal = (e, id, action) => {
+  const openConfirmModal = (e, id, action, isBulk = false) => {
     e.stopPropagation(); 
-    setModal({ show: true, logId: id, action: action });
+    setModal({ show: true, logId: id, action: action, isBulk: isBulk });
   };
 
   const confirmAction = async () => {
     try {
-      await axios.put(`https://interntrack-api.onrender.com/api/logs/${modal.logId}`, { status: modal.action });
-      setModal({ show: false, logId: null, action: '' });
+      if (modal.isBulk) {
+        // Bulk Approve Logic
+        const studentPendingLogs = logs.filter(l => l.student === selectedStudent && l.status === 'Pending');
+        await Promise.all(studentPendingLogs.map(log => 
+          axios.put(`https://interntrack-api.onrender.com/api/logs/${log._id}`, { status: 'Approved' })
+        ));
+      } else {
+        // Single Action Logic
+        await axios.put(`https://interntrack-api.onrender.com/api/logs/${modal.logId}`, { status: modal.action });
+      }
+      setModal({ show: false, logId: null, action: '', isBulk: false });
       fetchLogs();
     } catch (error) {
       console.error("Error updating status", error);
@@ -116,6 +124,9 @@ export default function Supervisor() {
   const totalStudents = Object.keys(studentSummaries).length;
   const totalApprovedHours = logs.filter(l => l.status === 'Approved').reduce((sum, l) => sum + Number(l.hours), 0);
 
+  // Helper for Student Detail Modal
+  const currentStudentPendingCount = logs.filter(l => l.student === selectedStudent && l.status === 'Pending').length;
+
   return (
     <div className="min-h-screen bg-gray-100 p-8 font-sans text-gray-800 relative">
       
@@ -124,31 +135,46 @@ export default function Supervisor() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border border-gray-100 animate-in fade-in zoom-in duration-200">
             <h3 className="text-xl font-bold text-blue-900 mb-2">Confirm Action</h3>
-            <p className="text-gray-500 text-sm mb-6">Are you sure you want to <span className="font-bold uppercase">{modal.action}</span> this entry?</p>
+            <p className="text-gray-500 text-sm mb-6">
+              {modal.isBulk 
+                ? `Are you sure you want to APPROVE ALL ${currentStudentPendingCount} pending logs for this student?` 
+                : `Are you sure you want to ${modal.action.toUpperCase()} this entry?`}
+            </p>
             <div className="flex gap-3">
-              <button onClick={() => setModal({ show: false, logId: null, action: '' })} className="flex-1 py-2 bg-gray-100 text-gray-600 rounded-lg font-bold hover:bg-gray-200 transition">Cancel</button>
-              <button onClick={confirmAction} className={`flex-1 py-2 text-white rounded-lg font-bold shadow-md transition ${modal.action === 'Approved' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}>Yes, {modal.action}</button>
+              <button onClick={() => setModal({ show: false, logId: null, action: '', isBulk: false })} className="flex-1 py-2 bg-gray-100 text-gray-600 rounded-lg font-bold hover:bg-gray-200 transition">Cancel</button>
+              <button onClick={confirmAction} className={`flex-1 py-2 text-white rounded-lg font-bold shadow-md transition ${modal.action === 'Rejected' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}>
+                Yes, {modal.isBulk ? 'Approve All' : modal.action}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* --- STUDENT DETAIL MODAL WITH SEARCH & STATUS FILTER --- */}
+      {/* --- STUDENT DETAIL MODAL --- */}
       {selectedStudent && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[90] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-300">
             <div className="p-6 bg-blue-900 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-black">{formatName(selectedStudent)}'s Records</h2>
-                <p className="text-blue-200 text-xs">{selectedStudent}</p>
+                <div className="flex items-center gap-2">
+                    <p className="text-blue-200 text-xs">{selectedStudent}</p>
+                    {currentStudentPendingCount > 0 && (
+                        <button 
+                            onClick={(e) => openConfirmModal(e, null, 'Approved', true)}
+                            className="bg-orange-500 hover:bg-orange-600 text-white text-[10px] px-2 py-0.5 rounded font-black uppercase transition animate-pulse"
+                        >
+                            Bulk Approve ({currentStudentPendingCount})
+                        </button>
+                    )}
+                </div>
               </div>
               
               <div className="flex flex-wrap items-center gap-3">
-                {/* STATUS FILTER DROPDOWN */}
                 <select 
                   value={statusFilter} 
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-xs text-white outline-none cursor-pointer hover:bg-white/20 transition"
+                  className="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-xs text-white outline-none cursor-pointer"
                 >
                   <option className="text-gray-800" value="All">All Status</option>
                   <option className="text-gray-800" value="Approved">Approved Only</option>
@@ -156,22 +182,15 @@ export default function Supervisor() {
                   <option className="text-gray-800" value="Rejected">Rejected Only</option>
                 </select>
 
-                <div className="relative">
-                  <input 
-                    type="text" 
-                    placeholder="Search tasks..." 
-                    className="bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-xs focus:bg-white focus:text-gray-800 outline-none transition-all w-32 md:w-40"
-                    value={innerSearch}
-                    onChange={(e) => setInnerSearch(e.target.value)}
-                  />
-                </div>
+                <input 
+                  type="text" 
+                  placeholder="Search tasks..." 
+                  className="bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-xs focus:bg-white focus:text-gray-800 outline-none transition-all w-32 md:w-40"
+                  value={innerSearch}
+                  onChange={(e) => setInnerSearch(e.target.value)}
+                />
 
-                <button 
-                  onClick={() => downloadCSV(selectedStudent)}
-                  className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-full text-xs font-bold transition shadow-md"
-                >
-                  📥 Download
-                </button>
+                <button onClick={() => downloadCSV(selectedStudent)} className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-full text-xs font-bold transition">📥 Download</button>
                 <button onClick={() => {setSelectedStudent(null); setInnerSearch(''); setStatusFilter('All');}} className="bg-white/10 hover:bg-white/20 p-2 rounded-full transition px-4 font-bold">✕</button>
               </div>
             </div>
@@ -183,7 +202,7 @@ export default function Supervisor() {
                     <th className="p-3 border-b">Date</th>
                     <th className="p-3 border-b">Hours</th>
                     <th className="p-3 border-b">Task Description</th>
-                    <th className="p-3 border-b">Status</th>
+                    <th className="p-3 border-b text-right">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -196,17 +215,14 @@ export default function Supervisor() {
                     <tr key={log._id} className="border-b last:border-0 hover:bg-gray-50 transition">
                       <td className="p-3 text-sm">{new Date(log.date).toLocaleDateString()}</td>
                       <td className="p-3 text-sm font-bold text-blue-900">{log.hours}h</td>
-                      <td className="p-3 text-sm text-gray-600 max-w-md">{log.description}</td>
-                      <td className="p-3">
+                      <td className="p-3 text-sm text-gray-600 max-w-md truncate">{log.description}</td>
+                      <td className="p-3 text-right">
                         <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${log.status === 'Approved' ? 'bg-green-100 text-green-700' : log.status === 'Pending' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
                           {log.status}
                         </span>
                       </td>
                     </tr>
                   ))}
-                  {logs.filter(l => l.student === selectedStudent && (statusFilter === 'All' || l.status === statusFilter) && l.description.toLowerCase().includes(innerSearch.toLowerCase())).length === 0 && (
-                    <tr><td colSpan="4" className="p-10 text-center text-gray-400 italic font-medium">No matching records found.</td></tr>
-                  )}
                 </tbody>
               </table>
             </div>
@@ -229,30 +245,30 @@ export default function Supervisor() {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <input type="text" placeholder="Search dashboard..." className="pl-4 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 w-72 shadow-sm transition-all" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          <input type="text" placeholder="Search dashboard..." className="pl-4 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 w-72 shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           <button onClick={() => { localStorage.removeItem('userEmail'); navigate('/'); }} className="bg-red-50 text-red-600 px-6 py-2 rounded-full font-bold hover:bg-red-600 hover:text-white transition shadow-sm border border-red-100">Logout</button>
         </div>
       </header>
 
-      {/* QUICK STATS */}
+      {/* STATS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <div className="bg-blue-900 text-white p-6 rounded-2xl shadow-lg hover:scale-[1.02] transition-transform">
-          <p className="text-blue-200 text-xs font-black uppercase tracking-widest leading-none mb-1">Total Active Students</p>
+        <div className="bg-blue-900 text-white p-6 rounded-2xl shadow-lg">
+          <p className="text-blue-200 text-xs font-black uppercase tracking-widest leading-none mb-1">Total Students</p>
           <h2 className="text-4xl font-black">{totalStudents}</h2>
         </div>
-        <div className="bg-white p-6 rounded-2xl shadow-md border-b-4 border-orange-500 hover:scale-[1.02] transition-transform">
-          <p className="text-gray-400 text-xs font-black uppercase tracking-widest leading-none mb-1">Pending Reviews</p>
+        <div className="bg-white p-6 rounded-2xl shadow-md border-b-4 border-orange-500">
+          <p className="text-gray-400 text-xs font-black uppercase tracking-widest leading-none mb-1">Pending Review</p>
           <h2 className="text-4xl font-black text-orange-600">{pendingLogs.length}</h2>
         </div>
-        <div className="bg-white p-6 rounded-2xl shadow-md border-b-4 border-purple-600 hover:scale-[1.02] transition-transform">
-          <p className="text-gray-400 text-xs font-black uppercase tracking-widest leading-none mb-1">Total Hours Approved</p>
+        <div className="bg-white p-6 rounded-2xl shadow-md border-b-4 border-purple-600">
+          <p className="text-gray-400 text-xs font-black uppercase tracking-widest leading-none mb-1">Approved Hours</p>
           <h2 className="text-4xl font-black text-purple-700">{totalApprovedHours}h</h2>
         </div>
       </div>
 
-      {/* PROGRESS TRACKING */}
+      {/* PROGRESS SECTION */}
       <div className="bg-white p-6 rounded-lg shadow-md mb-8 border-t-4 border-blue-600">
-        <h2 className="text-xl font-bold mb-4 text-blue-900 flex items-center gap-2">📊 Student Progress Tracking <span className="text-[10px] font-normal bg-blue-50 text-blue-600 px-2 py-1 rounded font-mono uppercase">Click card to view details</span></h2>
+        <h2 className="text-xl font-bold mb-4 text-blue-900 flex items-center gap-2">📊 Student Progress Tracking <span className="text-[10px] font-normal bg-blue-50 text-blue-600 px-2 py-1 rounded font-mono uppercase">Click for details</span></h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Object.keys(studentSummaries).map(studentEmail => {
             const data = studentSummaries[studentEmail];
@@ -318,7 +334,7 @@ export default function Supervisor() {
         </div>
       </div>
 
-      {/* MAIN HISTORY TABLE */}
+      {/* HISTORY TABLE */}
       <div className="bg-white p-6 rounded-lg shadow-md border-t-4 border-gray-300">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-gray-700">📜 Action History</h2>
@@ -331,7 +347,7 @@ export default function Supervisor() {
                 <th className="p-3 border-b">Date</th>
                 <th className="p-3 border-b">Student</th>
                 <th className="p-3 border-b">Hours</th>
-                <th className="p-3 border-b">Status</th>
+                <th className="p-3 border-b text-right">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -340,7 +356,7 @@ export default function Supervisor() {
                   <td className="p-3 text-sm text-gray-500">{new Date(log.date).toLocaleDateString()}</td>
                   <td className="p-3 text-sm font-bold text-gray-800">{formatName(log.student)}</td>
                   <td className="p-3 text-sm font-black text-blue-900">{log.hours}h</td>
-                  <td className="p-3"><span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${log.status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{log.status}</span></td>
+                  <td className="p-3 text-right"><span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${log.status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{log.status}</span></td>
                 </tr>
               ))}
             </tbody>
