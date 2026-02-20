@@ -5,25 +5,27 @@ import { Link } from 'react-router-dom';
 
 export default function Login() {
   const [isRegistering, setIsRegistering] = useState(false);
-  const [firstName, setFirstName] = useState(''); // NEW
-  const [lastName, setLastName] = useState('');   // NEW
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('student');
   const navigate = useNavigate();
+
+  // --- CENTRALIZED ADMIN SETTING ---
+  const MAIN_ADMIN_EMAIL = 'perrydumaual33@gmail.com';
+  // ---------------------------------
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (isRegistering) {
       try {
-        // Updated to send firstName and lastName
         await axios.post('https://interntrack-api.onrender.com/api/register', { 
           firstName, 
           lastName, 
           email, 
           password, 
-          role 
+          role: 'student' // Force everyone who registers to be a student
         });
         alert('Account created! You can now log in.');
         setIsRegistering(false);
@@ -35,16 +37,14 @@ export default function Login() {
       try {
         const response = await axios.post('https://interntrack-api.onrender.com/api/login', { email, password });
         
-        // --- STORAGE UPDATED ---
         localStorage.setItem('userEmail', email);
-        // Save the name sent back by the backend (assuming backend sends 'userName')
         if (response.data.userName) {
             localStorage.setItem('userName', response.data.userName);
         }
-        // -----------------------
 
-        const userRole = response.data.role; 
-        if (userRole === 'admin') {
+        // --- CENTRALIZED REDIRECT LOGIC ---
+        // If the email matches the hardcoded admin email, go to Supervisor
+        if (email.toLowerCase() === MAIN_ADMIN_EMAIL.toLowerCase()) {
           navigate('/supervisor');
         } else {
           navigate('/student');
@@ -66,7 +66,6 @@ export default function Login() {
         
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           
-          {/* NEW NAME FIELDS (Only show when registering) */}
           {isRegistering && (
             <div className="flex gap-2">
               <input 
@@ -94,15 +93,9 @@ export default function Login() {
             value={password} onChange={(e) => setPassword(e.target.value)}
           />
 
-          {isRegistering && (
-            <select 
-              className="border p-3 rounded bg-gray-50 focus:outline-blue-500 font-semibold text-gray-600"
-              value={role} onChange={(e) => setRole(e.target.value)}
-            >
-              <option value="student">I am a Student</option>
-              <option value="admin">I am a Supervisor</option>
-            </select>
-          )}
+          {/* REMOVED: The select role dropdown. 
+            We now force all registrations to be 'student' in the logic above.
+          */}
           
           <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-700 transition mt-2">
             {isRegistering ? 'Register Account' : 'Login'}
@@ -115,7 +108,7 @@ export default function Login() {
             <Link 
               to={isRegistering ? "/" : "/register"} 
               className="ml-1 text-blue-600 hover:underline font-semibold"
-              onClick={() => setIsRegistering(false)}
+              onClick={() => setIsRegistering(isRegistering ? false : true)}
             >
               {isRegistering ? 'Log in here' : 'Register here'}
             </Link>
