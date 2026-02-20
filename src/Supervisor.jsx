@@ -14,7 +14,23 @@ export default function Supervisor() {
   
   const navigate = useNavigate();
 
-  useEffect(() => { fetchLogs(); }, []);
+  // --- CENTRALIZED ADMIN SETTING ---
+  // Must match the email you set in Login.jsx
+  const MAIN_ADMIN_EMAIL = 'your-admin-email@gmail.com'; 
+
+  useEffect(() => { 
+    // SECURITY GUARD: Check if the logged-in user is the Main Admin
+    const currentUserEmail = localStorage.getItem('userEmail');
+
+    if (!currentUserEmail || currentUserEmail.toLowerCase() !== MAIN_ADMIN_EMAIL.toLowerCase()) {
+      // If not the admin, clear storage and kick them out
+      localStorage.clear();
+      navigate('/');
+      return;
+    }
+
+    fetchLogs(); 
+  }, [navigate]);
 
   const fetchLogs = async () => {
     try {
@@ -26,11 +42,9 @@ export default function Supervisor() {
   };
 
   // --- UPDATED NAME LOGIC ---
-  // This helper checks if the log has a studentName saved. 
-  // If not, it falls back to formatting the email.
   const displayName = (log) => {
     if (log.studentName) return log.studentName;
-    const email = log.student || log; // Fallback for cases where only email is passed
+    const email = log.student || log; 
     const namePart = email.split('@')[0];
     const firstName = namePart.split('.')[0];
     return firstName.charAt(0).toUpperCase() + firstName.slice(1);
