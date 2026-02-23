@@ -3,32 +3,40 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 
 export default function Register() {
-  // State for the new fields you requested
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
     email: '',
     password: '',
-    role: 'student' // Default role
+    role: 'student' 
   });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // THE KEY: This must match your supervisor email exactly
+  const MAIN_ADMIN_EMAIL = 'perrydumaual33@gmail.com';
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+
+    // --- AUTO-ASSIGN ADMIN ROLE ---
+    // If the email being registered is yours, we force the role to 'admin'
+    // regardless of what is selected in the dropdown.
+    const finalRole = form.email.toLowerCase().trim() === MAIN_ADMIN_EMAIL.toLowerCase().trim() 
+      ? 'admin' 
+      : 'student';
+
+    const finalFormData = { ...form, role: finalRole };
+
     try {
-      // 1. Send data to your backend
-      await axios.post('https://interntrack-api.onrender.com/api/register', form);
+      await axios.post('https://interntrack-api.onrender.com/api/register', finalFormData);
       
-      // 2. Clear sensitive data and notify user
-      alert("Registration Successful! Please log in with your new account.");
-      
-      // 3. Send them back to the login page to sign in
+      alert(`Account created successfully! ${finalRole === 'admin' ? 'Welcome back, Supervisor.' : ''}`);
       navigate('/');
     } catch (error) {
       console.error("Registration error", error);
-      alert(error.response?.data?.message || "Registration failed. Make sure your backend server.js is updated!");
+      alert(error.response?.data?.message || "Error creating account. Email might be taken.");
     } finally {
       setLoading(false);
     }
@@ -44,13 +52,11 @@ export default function Register() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Name Row */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-bold text-gray-500 uppercase">First Name</label>
               <input 
-                type="text" 
-                required
+                type="text" required
                 className="w-full p-3 mt-1 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
                 placeholder="John"
                 onChange={(e) => setForm({...form, firstName: e.target.value})}
@@ -59,8 +65,7 @@ export default function Register() {
             <div>
               <label className="text-xs font-bold text-gray-500 uppercase">Last Name</label>
               <input 
-                type="text" 
-                required
+                type="text" required
                 className="w-full p-3 mt-1 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
                 placeholder="Doe"
                 onChange={(e) => setForm({...form, lastName: e.target.value})}
@@ -68,35 +73,32 @@ export default function Register() {
             </div>
           </div>
 
-          {/* Email Field */}
           <div>
             <label className="text-xs font-bold text-gray-500 uppercase">Email Address</label>
             <input 
-              type="email" 
-              required
+              type="email" required
               className="w-full p-3 mt-1 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
               placeholder="john@example.com"
               onChange={(e) => setForm({...form, email: e.target.value})}
             />
           </div>
 
-          {/* Password Field */}
           <div>
             <label className="text-xs font-bold text-gray-500 uppercase">Password</label>
             <input 
-              type="password" 
-              required
+              type="password" required
               className="w-full p-3 mt-1 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
               placeholder="••••••••"
               onChange={(e) => setForm({...form, password: e.target.value})}
             />
           </div>
 
-          {/* Role Selection */}
+          {/* We keep the dropdown for students, but our code above overrides it for your email */}
           <div>
             <label className="text-xs font-bold text-gray-500 uppercase">I am a:</label>
             <select 
-              className="w-full p-3 mt-1 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
+              className="w-full p-3 mt-1 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              value={form.role}
               onChange={(e) => setForm({...form, role: e.target.value})}
             >
               <option value="student">Student / Intern</option>
@@ -105,8 +107,7 @@ export default function Register() {
           </div>
 
           <button 
-            type="submit" 
-            disabled={loading}
+            type="submit" disabled={loading}
             className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 transition shadow-lg disabled:bg-gray-400"
           >
             {loading ? "Creating Account..." : "Register Now"}
