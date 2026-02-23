@@ -43,13 +43,18 @@ export default function Supervisor() {
 
   // --- UPDATED NAME LOGIC ---
   const displayName = (log) => {
-    if (log.studentName) return log.studentName;
-    const email = log.student || log; 
-    const namePart = email.split('@')[0];
-    const firstName = namePart.split('.')[0];
-    return firstName.charAt(0).toUpperCase() + firstName.slice(1);
-  };
+    if (log.studentName && log.studentName.trim() !== "") return log.studentName;
+   const email = typeof log === 'string' ? log : (log.student || "");
+  if (!email) return "Unknown Student";
 
+  const namePart = email.split('@')[0];
+  const nameArray = namePart.split(/[._0-9]+/); // Removes dots, underscores, and numbers
+  
+  return nameArray
+    .filter(part => part.length > 0)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+};
   const formatTime = (dateString) => {
     const options = { hour: '2-digit', minute: '2-digit', hour12: true };
     return new Date(dateString).toLocaleTimeString([], options);
@@ -386,4 +391,5 @@ export default function Supervisor() {
     </div>
   );
 }
+
 
