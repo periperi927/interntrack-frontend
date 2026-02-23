@@ -1,16 +1,15 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './Login';
+import Register from './Register'; // 1. Added this import
 import Student from './Student';
 import Supervisor from './Supervisor';
 
 // --- THE SECURITY GUARD ---
-// This checks if the user is the specific admin before letting them in
 const AdminGuard = ({ children }) => {
   const userEmail = localStorage.getItem('userEmail');
   const MAIN_ADMIN_EMAIL = 'perrydumaual33@gmail.com';
 
-  if (!userEmail || userEmail.toLowerCase() !== MAIN_ADMIN_EMAIL.toLowerCase()) {
-    // If they are not the admin, kick them back to login
+  if (!userEmail || userEmail.toLowerCase().trim() !== MAIN_ADMIN_EMAIL.toLowerCase().trim()) {
     return <Navigate to="/" replace />;
   }
 
@@ -21,13 +20,14 @@ export default function App() {
   return (
     <Router>
       <Routes>
-        {/* Public Route: The Entrance */}
+        {/* Public Routes */}
         <Route path="/" element={<Login />} />
+        <Route path="/register" element={<Register />} /> {/* 2. Added this route */}
         
-        {/* Student Route: General dashboard */}
+        {/* Student Route */}
         <Route path="/student" element={<Student />} />
         
-        {/* Protected Admin Route: Wrapped in the Guard */}
+        {/* Protected Admin Route */}
         <Route 
           path="/supervisor" 
           element={
@@ -37,7 +37,7 @@ export default function App() {
           } 
         />
 
-        {/* Catch-all: Redirects any unknown URL back to Login */}
+        {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
