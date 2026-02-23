@@ -314,47 +314,65 @@ export default function Supervisor() {
             </div>
         </div>
 
-        {/* --- PROGRESS TRACKING --- */}
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl mb-12 border border-slate-100">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl font-black text-slate-800">📊 Progress Tracking</h2>
-            <span className="text-[10px] font-black bg-blue-50 text-blue-600 px-4 py-2 rounded-full uppercase tracking-tighter border border-blue-100">Target: 300 Hours</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Object.keys(studentSummaries).map(studentEmail => {
-              const data = studentSummaries[studentEmail];
-              const percent = Math.min((data.approved / 300) * 100, 100).toFixed(1);
-              const isDone = Number(percent) >= 100;
-              const isActiveToday = getTimeAgo(data.lastDate) === "Active Today";
-              
-              return (
-                <div key={studentEmail} onClick={() => setSelectedStudent(studentEmail)} className={`group relative p-6 rounded-[2rem] bg-slate-50 border border-transparent hover:border-blue-400 hover:bg-white transition-all cursor-pointer shadow-sm hover:shadow-xl ${isDone ? 'ring-2 ring-purple-500/20 bg-purple-50/30' : ''}`}>
-                  <div className="flex justify-between items-start mb-4">
-                      <div>
-                          <div className="flex items-center gap-2">
-                              <p className="font-black text-slate-700 group-hover:text-blue-700 transition">{data.name}</p>
-                              {isDone && <span className="bg-purple-600 text-white text-[8px] px-2 py-0.5 rounded-full font-black animate-bounce">GOAL</span>}
-                          </div>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">{studentEmail}</p>
-                      </div>
-                      <span className={`text-[8px] px-2 py-1 rounded-lg font-black uppercase ${isActiveToday ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>
-                          {getTimeAgo(data.lastDate)}
-                      </span>
-                  </div>
-                  <div className="flex justify-between text-xs mb-3 font-bold">
-                    <span className="text-slate-600">Approved: <b className="text-blue-600">{data.approved}h</b></span>
-                    <span className={data.pending > 0 ? "text-orange-600" : "text-slate-400"}>Pending: <b>{data.pending}h</b></span>
-                  </div>
-                  <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden p-0.5 shadow-inner">
-                    <div className={`h-full rounded-full transition-all duration-1000 ${isDone ? 'bg-purple-600' : 'bg-blue-600'}`} style={{ width: `${percent}%` }}></div>
-                  </div>
-                  <p className={`text-[10px] text-right mt-2 font-black ${isDone ? 'text-purple-600' : 'text-blue-600'}`}>{percent}% Complete</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+       {/* --- PROGRESS TRACKING --- */}
+<div className="bg-white p-8 rounded-[2.5rem] shadow-xl mb-12 border border-slate-100">
+  <div className="flex justify-between items-center mb-8">
+    <h2 className="text-2xl font-black text-slate-800">📊 Progress Tracking</h2>
+    <span className="text-[10px] font-black bg-blue-50 text-blue-600 px-4 py-2 rounded-full uppercase tracking-tighter border border-blue-100">Target: 300 Hours</span>
+  </div>
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {Object.keys(studentSummaries).map(studentEmail => {
+      const data = studentSummaries[studentEmail];
+      const percent = Math.min((data.approved / 300) * 100, 100).toFixed(1);
+      const isDone = Number(percent) >= 100;
+      
+      // --- LAST SEEN CALCULATION ---
+      const lastActiveDate = new Date(data.lastDate);
+      const today = new Date();
+      // Calculate difference in days
+      const diffTime = Math.abs(today.setHours(0,0,0,0) - lastActiveDate.setHours(0,0,0,0));
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      // Mark as inactive if 3 or more days have passed
+      const isInactive = diffDays >= 3; 
+      const isActiveToday = diffDays === 0;
 
+      return (
+        <div key={studentEmail} onClick={() => setSelectedStudent(studentEmail)} className={`group relative p-6 rounded-[2rem] bg-slate-50 border border-transparent hover:border-blue-400 hover:bg-white transition-all cursor-pointer shadow-sm hover:shadow-xl ${isDone ? 'ring-2 ring-purple-500/20 bg-purple-50/30' : ''}`}>
+          <div className="flex justify-between items-start mb-4">
+              <div>
+                  <div className="flex items-center gap-2">
+                      <p className="font-black text-slate-700 group-hover:text-blue-700 transition">{data.name}</p>
+                      {/* INACTIVE BADGE */}
+                      {isInactive && (
+                        <span className="bg-red-100 text-red-600 text-[8px] px-2 py-0.5 rounded-full font-black animate-pulse">
+                          INACTIVE
+                        </span>
+                      )}
+                      {isDone && <span className="bg-purple-600 text-white text-[8px] px-2 py-0.5 rounded-full font-black">GOAL</span>}
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">{studentEmail}</p>
+              </div>
+              {/* STATUS BADGE */}
+              <span className={`text-[8px] px-2 py-1 rounded-lg font-black uppercase ${isActiveToday ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>
+                  {getTimeAgo(data.lastDate)}
+              </span>
+          </div>
+          
+          <div className="flex justify-between text-xs mb-3 font-bold">
+            <span className="text-slate-600">Approved: <b className="text-blue-600">{data.approved}h</b></span>
+            <span className={data.pending > 0 ? "text-orange-600" : "text-slate-400"}>Pending: <b>{data.pending}h</b></span>
+          </div>
+          
+          <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden p-0.5 shadow-inner">
+            <div className={`h-full rounded-full transition-all duration-1000 ${isDone ? 'bg-purple-600' : 'bg-blue-600'}`} style={{ width: `${percent}%` }}></div>
+          </div>
+          <p className={`text-[10px] text-right mt-2 font-black ${isDone ? 'text-purple-600' : 'text-blue-600'}`}>{percent}% Complete</p>
+        </div>
+      );
+    })}
+  </div>
+</div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* --- PENDING TABLE --- */}
             <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
@@ -417,3 +435,4 @@ export default function Supervisor() {
     </div>
   );
 }
+
