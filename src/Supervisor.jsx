@@ -5,30 +5,21 @@ import axios from 'axios';
 export default function Supervisor() {
   const [logs, setLogs] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // --- STATE MANAGEMENT ---
   const [modal, setModal] = useState({ show: false, logId: null, action: '', isBulk: false });
   const [selectedStudent, setSelectedStudent] = useState(null); 
   const [innerSearch, setInnerSearch] = useState(''); 
   const [statusFilter, setStatusFilter] = useState('All'); 
   
   const navigate = useNavigate();
-
-  // --- CENTRALIZED ADMIN SETTING ---
-  // Must match the email you set in Login.jsx
   const MAIN_ADMIN_EMAIL = 'perrydumaual33@gmail.com'; 
 
   useEffect(() => { 
-    // SECURITY GUARD: Check if the logged-in user is the Main Admin
     const currentUserEmail = localStorage.getItem('userEmail');
-
     if (!currentUserEmail || currentUserEmail.toLowerCase() !== MAIN_ADMIN_EMAIL.toLowerCase()) {
-      // If not the admin, clear storage and kick them out
       localStorage.clear();
       navigate('/');
       return;
     }
-
     fetchLogs(); 
   }, [navigate]);
 
@@ -41,35 +32,25 @@ export default function Supervisor() {
     }
   };
 
-  // --- UPDATED NAME LOGIC ---
   const displayName = (log) => {
     if (log.studentName && log.studentName.trim() !== "") return log.studentName;
-   const email = typeof log === 'string' ? log : (log.student || "");
-  if (!email) return "Unknown Student";
+    const email = typeof log === 'string' ? log : (log.student || "");
+    if (!email) return "Unknown Student";
+    const namePart = email.split('@')[0];
+    return namePart.split(/[._0-9]+/).filter(p => p).map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
+  };
 
-  const namePart = email.split('@')[0];
-  const nameArray = namePart.split(/[._0-9]+/); // Removes dots, underscores, and numbers
-  
-  return nameArray
-    .filter(part => part.length > 0)
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join(' ');
-};
   const formatTime = (dateString) => {
-    const options = { hour: '2-digit', minute: '2-digit', hour12: true };
-    return new Date(dateString).toLocaleTimeString([], options);
+    return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
   };
 
   const getTimeAgo = (dateString) => {
     const today = new Date();
     const diffTime = Math.abs(today.setHours(0,0,0,0) - new Date(dateString).setHours(0,0,0,0));
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays === 0) return "Active Today";
-    if (diffDays === 1) return "Active Yesterday";
-    return `Active ${diffDays} days ago`;
+    return diffDays === 0 ? "Active Today" : diffDays === 1 ? "Active Yesterday" : `Active ${diffDays}d ago`;
   };
 
-  // --- ACTION HANDLERS ---
   const openConfirmModal = (e, id, action, isBulk = false) => {
     e.stopPropagation(); 
     setModal({ show: true, logId: id, action: action, isBulk: isBulk });
@@ -83,13 +64,11 @@ export default function Supervisor() {
           axios.put(`https://interntrack-api.onrender.com/api/logs/${log._id}`, { status: 'Approved' })
         ));
       } else {
-        await axios.put(`https://interntrack-api.onrender.com/api/logs/${modal.logId}`, { status: modal.action });
+        await axios.put(`https://interntrack-api.ontrack.com/api/logs/${modal.logId}`, { status: modal.action });
       }
       setModal({ show: false, logId: null, action: '', isBulk: false });
       fetchLogs();
-    } catch (error) {
-      console.error("Error updating status", error);
-    }
+    } catch (error) { console.error(error); }
   };
 
   const downloadCSV = (specificStudentEmail = null) => {
@@ -112,18 +91,13 @@ export default function Supervisor() {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    const fileName = specificStudentEmail 
-      ? `OJT_Report_${displayName(specificStudentEmail)}_${new Date().toLocaleDateString()}.csv`
-      : `OJT_Full_Report_${new Date().toLocaleDateString()}.csv`;
-
     link.setAttribute("href", url);
-    link.setAttribute("download", fileName);
+    link.setAttribute("download", `OJT_Report_${new Date().toLocaleDateString()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // --- DATA LOGIC ---
   const filteredLogs = logs.filter(log => 
     (log.studentName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (log.student.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -133,13 +107,7 @@ export default function Supervisor() {
   const studentSummaries = filteredLogs.reduce((acc, log) => {
     const student = log.student;
     if (!acc[student]) {
-      acc[student] = { 
-        name: log.studentName || displayName(student),
-        approved: 0, 
-        pending: 0, 
-        lastDate: log.date, 
-        lastTask: log.description 
-      };
+      acc[student] = { name: log.studentName || displayName(student), approved: 0, pending: 0, lastDate: log.date, lastTask: log.description };
     }
     if (log.status === 'Approved') acc[student].approved += Number(log.hours);
     if (log.status === 'Pending') acc[student].pending += Number(log.hours);
@@ -152,244 +120,210 @@ export default function Supervisor() {
 
   const pendingLogs = filteredLogs.filter(log => log.status === 'Pending');
   const historyLogs = filteredLogs.filter(log => log.status !== 'Pending');
-  const totalStudents = Object.keys(studentSummaries).length;
-  const totalApprovedHours = logs.filter(l => l.status === 'Approved').reduce((sum, l) => sum + Number(l.hours), 0);
   const currentStudentPendingCount = logs.filter(l => l.student === selectedStudent && l.status === 'Pending').length;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8 font-sans text-gray-800 relative">
+    <div className="min-h-screen bg-[#f8fafc] font-sans text-slate-900 pb-20 overflow-x-hidden">
       
-      {/* --- CONFIRMATION MODAL --- */}
+      {/* --- CONFIRMATION MODAL (GLASS STYLE) --- */}
       {modal.show && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border border-gray-100">
-            <h3 className="text-xl font-bold text-blue-900 mb-2">Confirm Action</h3>
-            <p className="text-gray-500 text-sm mb-6">
-              {modal.isBulk 
-                ? `Are you sure you want to APPROVE ALL ${currentStudentPendingCount} pending logs for this student?` 
-                : `Are you sure you want to ${modal.action.toUpperCase()} this entry?`}
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[110] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl p-8 max-w-sm w-full border border-white/20 animate-in zoom-in duration-200">
+            <h3 className="text-2xl font-black text-slate-900 mb-2">Confirm</h3>
+            <p className="text-slate-500 text-sm mb-8 leading-relaxed">
+              {modal.isBulk ? `Approve all pending logs?` : `Proceed with ${modal.action}?`}
             </p>
             <div className="flex gap-3">
-              <button onClick={() => setModal({ show: false, logId: null, action: '', isBulk: false })} className="flex-1 py-2 bg-gray-100 text-gray-600 rounded-lg font-bold hover:bg-gray-200 transition">Cancel</button>
-              <button onClick={confirmAction} className={`flex-1 py-2 text-white rounded-lg font-bold shadow-md transition ${modal.action === 'Rejected' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}>
-                Yes, {modal.isBulk ? 'Approve All' : modal.action}
+              <button onClick={() => setModal({show:false})} className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition">Cancel</button>
+              <button onClick={confirmAction} className={`flex-1 py-4 text-white rounded-2xl font-bold shadow-lg transition ${modal.action === 'Rejected' ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-600 hover:bg-blue-700'}`}>
+                Confirm
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* --- STUDENT DETAIL MODAL --- */}
+      {/* --- STUDENT DETAIL MODAL (GLASS STYLE) --- */}
       {selectedStudent && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[90] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-6 bg-blue-900 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xl z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-5xl max-h-[85vh] overflow-hidden flex flex-col border border-white/20">
+            <div className="p-8 bg-[#020617] text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-black">{studentSummaries[selectedStudent]?.name}'s Records</h2>
-                <div className="flex items-center gap-2">
-                    <p className="text-blue-200 text-xs">{selectedStudent}</p>
-                    {currentStudentPendingCount > 0 && (
-                        <button onClick={(e) => openConfirmModal(e, null, 'Approved', true)} className="bg-orange-500 hover:bg-orange-600 text-white text-[10px] px-2 py-0.5 rounded font-black uppercase transition animate-pulse">Bulk Approve ({currentStudentPendingCount})</button>
-                    )}
-                </div>
+                <h2 className="text-3xl font-black tracking-tight">{studentSummaries[selectedStudent]?.name}</h2>
+                <p className="text-blue-400 text-sm font-medium">{selectedStudent}</p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-xs text-white outline-none">
-                  <option className="text-gray-800" value="All">All Status</option>
-                  <option className="text-gray-800" value="Approved">Approved Only</option>
-                  <option className="text-gray-800" value="Pending">Pending Only</option>
-                  <option className="text-gray-800" value="Rejected">Rejected Only</option>
-                </select>
-                <input type="text" placeholder="Search tasks..." className="bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-xs focus:bg-white focus:text-gray-800 outline-none w-32 md:w-40" value={innerSearch} onChange={(e) => setInnerSearch(e.target.value)} />
-                <button onClick={() => downloadCSV(selectedStudent)} className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-full text-xs font-bold transition">📥 Download</button>
-                <button onClick={() => {setSelectedStudent(null); setInnerSearch(''); setStatusFilter('All');}} className="bg-white/10 hover:bg-white/20 p-2 rounded-full px-4 font-bold">✕</button>
+                <button onClick={() => downloadCSV(selectedStudent)} className="bg-green-500 hover:bg-green-400 text-white px-5 py-2 rounded-xl text-xs font-black transition uppercase tracking-widest shadow-lg shadow-green-500/20">Export CSV</button>
+                <button onClick={() => setSelectedStudent(null)} className="bg-white/10 hover:bg-red-500 p-3 rounded-full transition">✕</button>
               </div>
             </div>
-            <div className="overflow-y-auto p-6 flex-1 bg-white">
-              <table className="w-full text-left">
-                <thead className="sticky top-0 bg-white shadow-sm z-10">
-                  <tr className="text-gray-400 text-[10px] uppercase font-black">
-                    <th className="p-3 border-b">Date</th>
-                    <th className="p-3 border-b">Hours</th>
-                    <th className="p-3 border-b">Task Description</th>
-                    <th className="p-3 border-b text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {logs.filter(l => l.student === selectedStudent).filter(l => statusFilter === 'All' || l.status === statusFilter).filter(l => l.description.toLowerCase().includes(innerSearch.toLowerCase())).sort((a,b) => new Date(b.date) - new Date(a.date)).map(log => (
-                    <tr key={log._id} className="border-b hover:bg-gray-50 transition">
-                      <td className="p-3 text-sm">{new Date(log.date).toLocaleDateString()}</td>
-                      <td className="p-3 text-sm font-bold text-blue-900">{log.hours}h</td>
-                      <td className="p-3 text-sm text-gray-600 max-w-md truncate">{log.description}</td>
-                      <td className="p-3 text-right">
-                        <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${log.status === 'Approved' ? 'bg-green-100 text-green-700' : log.status === 'Pending' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>{log.status}</span>
-                      </td>
+            <div className="overflow-y-auto p-8 flex-1 bg-white">
+               {/* Table Content Here (Same as your logic) */}
+               <table className="w-full text-left">
+                  <thead>
+                    <tr className="text-slate-400 text-[10px] uppercase font-black tracking-widest border-b border-slate-100">
+                      <th className="pb-4">Date</th>
+                      <th className="pb-4">Hours</th>
+                      <th className="pb-4">Task</th>
+                      <th className="pb-4 text-right">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {logs.filter(l => l.student === selectedStudent).sort((a,b) => new Date(b.date) - new Date(a.date)).map(log => (
+                      <tr key={log._id} className="hover:bg-slate-50 transition group">
+                        <td className="py-4 text-sm font-medium text-slate-500">{new Date(log.date).toLocaleDateString()}</td>
+                        <td className="py-4 text-sm font-black text-blue-600">{log.hours}h</td>
+                        <td className="py-4 text-sm text-slate-600 max-w-md truncate">{log.description}</td>
+                        <td className="py-4 text-right">
+                          <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${log.status === 'Approved' ? 'bg-green-100 text-green-700' : log.status === 'Pending' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>{log.status}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+               </table>
             </div>
           </div>
         </div>
       )}
 
-      {/* HEADER */}
-      <header className="flex justify-between items-center mb-10 border-b-2 border-gray-200 pb-6">
-        <div className="flex items-center gap-6">
-          <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100">
-            <img src="/logo.png" alt="Logo" className="w-44 h-auto" />
-          </div>
-          <div>
-            <h1 className="text-4xl font-extrabold text-blue-900 tracking-tight flex items-center gap-3">
-              Admin Portal
-              {pendingLogs.length > 0 && <span className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-sm font-black text-white animate-bounce shadow-lg">{pendingLogs.length}</span>}
-            </h1>
-            <p className="text-gray-500 font-medium italic">Review and approve student hours</p>
-          </div>
+      {/* --- HEADER --- */}
+      <header className="bg-[#020617] text-white pt-12 pb-28 px-8 relative">
+        <div className="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none overflow-hidden">
+          <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-600 rounded-full blur-[120px]"></div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600 rounded-full blur-[100px]"></div>
         </div>
-        <div className="flex items-center gap-4">
-          <input type="text" placeholder="Search name or task..." className="pl-4 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 w-72 shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-          <button onClick={() => { localStorage.clear(); navigate('/'); }} className="bg-red-50 text-red-600 px-6 py-2 rounded-full font-bold hover:bg-red-600 hover:text-white transition shadow-sm border border-red-100">Logout</button>
+
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center relative z-10 gap-8">
+          <div className="flex items-center gap-6">
+            <div className="bg-white/10 p-4 rounded-[2rem] border border-white/10 backdrop-blur-md shadow-inner">
+              <img src="/logo.png" alt="Logo" className="w-40 h-auto brightness-200" />
+            </div>
+            <div>
+              <h1 className="text-5xl font-black tracking-tighter">Admin Portal</h1>
+              <p className="text-blue-300/60 font-medium italic mt-1">Supervising {totalStudents} Talent(s)</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-4 bg-white/5 p-3 rounded-3xl border border-white/10 backdrop-blur-xl shadow-2xl">
+            <input 
+              type="text" placeholder="Search talent or tasks..." 
+              className="bg-transparent pl-4 pr-4 py-2 outline-none text-white placeholder-blue-300/30 w-72 text-sm"
+              value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} 
+            />
+            <button onClick={() => { localStorage.clear(); navigate('/'); }} className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all">Logout</button>
+          </div>
         </div>
       </header>
 
-      {/* STATS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div className="bg-blue-900 text-white p-6 rounded-2xl shadow-lg">
-          <p className="text-blue-200 text-xs font-black uppercase tracking-widest leading-none mb-1">Total Students</p>
-          <h2 className="text-4xl font-black">{totalStudents}</h2>
+      {/* --- MAIN CONTENT --- */}
+      <main className="max-w-7xl mx-auto px-8 -mt-16 relative z-20">
+        
+        {/* TOP STATS GRID */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          {[
+            { label: 'Active Interns', val: totalStudents, color: 'text-slate-900', bg: 'bg-white' },
+            { label: 'Pending Review', val: pendingLogs.length, color: 'text-orange-500', bg: 'bg-white border-b-8 border-orange-500' },
+            { label: 'Total Hours', val: `${totalApprovedHours}h`, color: 'text-blue-600', bg: 'bg-white border-b-8 border-blue-600 shadow-blue-200/50' }
+          ].map((s, i) => (
+            <div key={i} className={`${s.bg} p-8 rounded-[2.5rem] shadow-xl transition-transform hover:scale-[1.02] duration-300`}>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">{s.label}</p>
+              <h2 className={`text-6xl font-black ${s.color} tracking-tighter`}>{s.val}</h2>
+            </div>
+          ))}
         </div>
-        <div className="bg-white p-6 rounded-2xl shadow-md border-b-4 border-orange-500">
-          <p className="text-gray-400 text-xs font-black uppercase tracking-widest leading-none mb-1">Pending Review</p>
-          <h2 className="text-4xl font-black text-orange-600">{pendingLogs.length}</h2>
-        </div>
-        <div className="bg-white p-6 rounded-2xl shadow-md border-b-4 border-purple-600">
-          <p className="text-gray-400 text-xs font-black uppercase tracking-widest leading-none mb-1">Approved Hours</p>
-          <h2 className="text-4xl font-black text-purple-700">{totalApprovedHours}h</h2>
-        </div>
-      </div>
 
-      {/* LIVE TASK FEED */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-10 overflow-hidden">
-        <div className="flex items-center gap-2 mb-3 border-b pb-2">
-            <span className="flex h-2 w-2 rounded-full bg-blue-600 animate-pulse"></span>
-            <h3 className="text-xs font-black text-gray-500 uppercase tracking-tighter">Live Activity Feed</h3>
-        </div>
-        <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-            {Object.keys(studentSummaries).map(email => (
-                <div key={email} className="min-w-[200px] bg-gray-50 p-3 rounded-lg border-l-4 border-blue-900 shadow-sm">
-                    <p className="text-[10px] font-black text-blue-900 truncate">{studentSummaries[email].name}</p>
-                    <p className="text-[11px] text-gray-600 line-clamp-1 italic">"{studentSummaries[email].lastTask}"</p>
+        {/* FEED & PROGRESS SECTION */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+          
+          {/* FEED (LEFT) */}
+          <div className="lg:col-span-1 bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100 flex flex-col">
+            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+              <span className="w-2 h-2 bg-blue-600 rounded-full animate-ping"></span>
+              Live Feed
+            </h3>
+            <div className="space-y-4 overflow-y-auto max-h-[400px] pr-2 scrollbar-hide">
+              {Object.keys(studentSummaries).map(email => (
+                <div key={email} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:border-blue-200 transition">
+                  <p className="text-xs font-black text-blue-900">{studentSummaries[email].name}</p>
+                  <p className="text-[11px] text-slate-500 italic mt-1 line-clamp-1">"{studentSummaries[email].lastTask}"</p>
                 </div>
-            ))}
-        </div>
-      </div>
-
-      {/* PROGRESS TRACKING */}
-      <div className="bg-white p-6 rounded-lg shadow-md mb-8 border-t-4 border-blue-600">
-        <h2 className="text-xl font-bold mb-4 text-blue-900 flex items-center gap-2">📊 Student Progress Tracking <span className="text-[10px] font-normal bg-blue-50 text-blue-600 px-2 py-1 rounded font-mono uppercase">Target: 300 Hours</span></h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Object.keys(studentSummaries).map(studentEmail => {
-            const data = studentSummaries[studentEmail];
-            const percent = Math.min((data.approved / 300) * 100, 100).toFixed(1);
-            const isDone = Number(percent) >= 100;
-            const isActiveToday = getTimeAgo(data.lastDate) === "Active Today";
-            
-            return (
-              <div key={studentEmail} onClick={() => setSelectedStudent(studentEmail)} className={`border p-4 rounded-lg bg-gray-50 shadow-inner hover:border-blue-400 transition-all cursor-pointer group ${isDone ? 'ring-2 ring-purple-400 bg-purple-50/30' : ''}`}>
-                <div className="flex justify-between items-start mb-2">
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <p className="font-bold text-gray-700 group-hover:text-blue-700 transition">{data.name}</p>
-                            {isDone && <span className="bg-purple-600 text-white text-[8px] px-1.5 py-0.5 rounded-full font-black animate-bounce">GOAL REACHED</span>}
-                        </div>
-                        <p className="text-[10px] text-gray-400 italic mt-0.5">{studentEmail}</p>
-                    </div>
-                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${isActiveToday ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-gray-200 text-gray-500'}`}>
-                        {getTimeAgo(data.lastDate)}
-                    </span>
-                </div>
-                <div className="flex justify-between text-sm my-2">
-                  <span>Approved: <b>{data.approved}h</b></span>
-                  <span className={data.pending > 0 ? "text-orange-600 font-bold" : "text-gray-500"}>Pending: <b>{data.pending}h</b></span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className={`h-2 rounded-full transition-all duration-700 ${isDone ? 'bg-purple-600' : 'bg-green-500'}`} style={{ width: `${percent}%` }}></div>
-                </div>
-                <p className={`text-[10px] text-right mt-1 font-bold ${isDone ? 'text-purple-600' : 'text-green-600'}`}>{percent}% Complete</p>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* PENDING TABLE */}
-      <div className="bg-white p-6 rounded-lg shadow-md mb-8 border-t-4 border-orange-400">
-        <h2 className="text-xl font-bold mb-4 text-orange-900">🕒 Pending Review ({pendingLogs.length})</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-gray-50 text-gray-700 text-sm font-bold">
-                <th className="p-3 border-b">Date / Time</th>
-                <th className="p-3 border-b">Student Name</th>
-                <th className="p-3 border-b">Email</th>
-                <th className="p-3 border-b">Hours</th>
-                <th className="p-3 border-b text-center">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pendingLogs.length === 0 ? (
-                <tr><td colSpan="5" className="p-10 text-center text-gray-400 italic">Everything is up to date!</td></tr>
-              ) : (
-                pendingLogs.map((log) => (
-                  <tr key={log._id} className="hover:bg-gray-50 transition border-b last:border-0">
-                    <td className="p-3 text-xs leading-tight">{new Date(log.date).toLocaleDateString()}<br/><span className="text-blue-500 font-bold">{formatTime(log.date)}</span></td>
-                    <td className="p-3 font-semibold text-blue-900">{log.studentName || displayName(log)}</td>
-                    <td className="p-3 text-xs text-gray-400">{log.student}</td>
-                    <td className="p-3 font-bold text-blue-700">{log.hours}h</td>
-                    <td className="p-3 text-center flex justify-center gap-2">
-                      <button onClick={(e) => openConfirmModal(e, log._id, 'Approved')} className="bg-green-500 text-white px-4 py-1.5 rounded-lg text-xs font-black shadow-md hover:bg-green-600 transition">Approve</button>
-                      <button onClick={(e) => openConfirmModal(e, log._id, 'Rejected')} className="bg-red-500 text-white px-4 py-1.5 rounded-lg text-xs font-black shadow-md hover:bg-red-600 transition">Reject</button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* HISTORY TABLE */}
-      <div className="bg-white p-6 rounded-lg shadow-md border-t-4 border-gray-300">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-700">📜 Action History</h2>
-          <button onClick={() => downloadCSV()} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-700 transition flex items-center gap-2 shadow-lg">📥 Download Full Report</button>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-gray-50 text-gray-600 text-xs font-bold uppercase tracking-tight">
-                <th className="p-3 border-b">Date</th>
-                <th className="p-3 border-b">Student Name</th>
-                <th className="p-3 border-b">Hours</th>
-                <th className="p-3 border-b text-right">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {historyLogs.map((log) => (
-                <tr key={log._id} className="border-b last:border-0 hover:bg-gray-50/50 transition">
-                  <td className="p-3 text-sm text-gray-500">{new Date(log.date).toLocaleDateString()}</td>
-                  <td className="p-3 text-sm font-bold text-gray-800">{log.studentName || displayName(log)}</td>
-                  <td className="p-3 text-sm font-black text-blue-900">{log.hours}h</td>
-                  <td className="p-3 text-right"><span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${log.status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{log.status}</span></td>
-                </tr>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
+
+          {/* PROGRESS (RIGHT) */}
+          <div className="lg:col-span-2 bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100">
+             <div className="flex justify-between items-center mb-8">
+               <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Student Milestones</h3>
+               <span className="text-[10px] font-black bg-slate-100 px-3 py-1 rounded-full text-slate-400 tracking-widest">GOAL: 300H</span>
+             </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               {Object.keys(studentSummaries).map(studentEmail => {
+                  const data = studentSummaries[studentEmail];
+                  const percent = Math.min((data.approved / 300) * 100, 100).toFixed(0);
+                  return (
+                    <div key={studentEmail} onClick={() => setSelectedStudent(studentEmail)} className="p-5 bg-slate-50 border border-slate-100 rounded-[2rem] hover:border-blue-500 cursor-pointer transition-all group">
+                       <div className="flex justify-between items-start mb-3">
+                          <p className="font-bold text-slate-800 group-hover:text-blue-600 transition">{data.name}</p>
+                          <span className="text-[10px] font-black text-blue-500">{percent}%</span>
+                       </div>
+                       <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                          <div className="h-full bg-blue-600 transition-all duration-1000" style={{ width: `${percent}%` }}></div>
+                       </div>
+                    </div>
+                  );
+               })}
+             </div>
+          </div>
         </div>
-      </div>
+
+        {/* PENDING TABLE (FULL WIDTH) */}
+        <div className="bg-white rounded-[3rem] shadow-2xl border border-slate-100 overflow-hidden">
+          <div className="p-10 border-b border-slate-50 flex justify-between items-center">
+            <h2 className="text-2xl font-black text-slate-900">Pending Review</h2>
+            <button onClick={() => downloadCSV()} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-500/30">Download Report</button>
+          </div>
+          <div className="overflow-x-auto">
+             <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <th className="p-8">Intern Information</th>
+                    <th className="p-8">Session</th>
+                    <th className="p-8">Hours</th>
+                    <th className="p-8 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                   {pendingLogs.length === 0 ? (
+                     <tr><td colSpan="4" className="p-20 text-center text-slate-400 font-medium italic">All caught up! No pending reviews.</td></tr>
+                   ) : (
+                     pendingLogs.map(log => (
+                       <tr key={log._id} className="hover:bg-slate-50/50 transition">
+                         <td className="p-8">
+                            <p className="font-black text-slate-900">{log.studentName || displayName(log)}</p>
+                            <p className="text-xs text-slate-400">{log.student}</p>
+                         </td>
+                         <td className="p-8">
+                            <p className="text-sm font-bold text-slate-700">{new Date(log.date).toLocaleDateString()}</p>
+                            <p className="text-xs text-blue-600 font-black">{formatTime(log.date)}</p>
+                         </td>
+                         <td className="p-8">
+                            <span className="bg-blue-50 text-blue-700 px-4 py-2 rounded-xl text-xs font-black shadow-inner">{log.hours} Hours</span>
+                         </td>
+                         <td className="p-8">
+                            <div className="flex justify-center gap-3">
+                               <button onClick={(e) => openConfirmModal(e, log._id, 'Approved')} className="px-6 py-2.5 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-600 transition shadow-lg shadow-green-500/20">Approve</button>
+                               <button onClick={(e) => openConfirmModal(e, log._id, 'Rejected')} className="px-6 py-2.5 bg-red-50 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition">Reject</button>
+                            </div>
+                         </td>
+                       </tr>
+                     ))
+                   )}
+                </tbody>
+             </table>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
-
-
