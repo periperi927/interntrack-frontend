@@ -5,6 +5,7 @@ import axios from 'axios';
 export default function Supervisor() {
   const [logs, setLogs] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
   
   // --- STATE MANAGEMENT ---
   const [modal, setModal] = useState({ show: false, logId: null, action: '', isBulk: false });
@@ -28,11 +29,15 @@ export default function Supervisor() {
   }, [navigate]);
 
   const fetchLogs = async () => {
+    setLoading(true); 
     try {
       const response = await axios.get('https://interntrack-api.onrender.com/api/logs');
       setLogs(response.data);
     } catch (error) {
       console.error("Error fetching logs", error);
+    } finally {
+      // Small delay to make the transition smooth
+      setTimeout(() => setLoading(false), 800);
     }
   };
 
@@ -147,6 +152,35 @@ export default function Supervisor() {
   const totalApprovedHours = logs.filter(l => l.status === 'Approved').reduce((sum, l) => sum + Number(l.hours), 0);
   const currentStudentPendingCount = logs.filter(l => l.student === selectedStudent && l.status === 'Pending').length;
 
+  // --- SKELETON GATEKEEPER ---
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] font-sans">
+        <div className="bg-[#020617] pt-12 pb-32 px-8">
+          <div className="max-w-7xl mx-auto flex justify-between items-center">
+             <div className="flex items-center gap-6">
+                <div className="w-16 h-16 bg-white/10 rounded-3xl animate-pulse"></div>
+                <div className="h-10 w-64 bg-white/10 rounded-xl animate-pulse"></div>
+             </div>
+             <div className="h-12 w-80 bg-white/10 rounded-2xl animate-pulse"></div>
+          </div>
+        </div>
+        <main className="max-w-7xl mx-auto px-8 -mt-20 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[1, 2, 3].map(i => <div key={i} className="h-32 bg-white rounded-[2rem] shadow-xl animate-pulse"></div>)}
+          </div>
+          <div className="h-24 bg-white/60 rounded-[2rem] animate-pulse"></div>
+          <div className="h-96 bg-white rounded-[2.5rem] animate-pulse"></div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+             <div className="h-80 bg-white rounded-[2.5rem] animate-pulse"></div>
+             <div className="h-80 bg-white rounded-[2.5rem] animate-pulse"></div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // --- MAIN RENDER ---
   return (
     <div className="min-h-screen bg-[#f8fafc] font-sans text-slate-900 pb-20">
       
