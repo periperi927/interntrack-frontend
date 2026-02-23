@@ -6,6 +6,7 @@ export default function Student() {
   const [logs, setLogs] = useState([]);
   const [form, setForm] = useState({ hours: '', description: '' });
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
 
   // --- NAME LOGIC ---
   const currentUserEmail = localStorage.getItem('userEmail') || 'Guest';
@@ -25,11 +26,15 @@ export default function Student() {
   }, []);
 
   const fetchLogs = async () => {
+    setLoading(true); 
     try {
       const response = await axios.get('https://interntrack-api.onrender.com/api/logs');
       setLogs(response.data);
     } catch (error) {
       console.error("Error fetching logs", error);
+    } finally {
+      // Small timeout to prevent the "flicker" on fast connections
+      setTimeout(() => setLoading(false), 800);
     }
   };
 
@@ -78,6 +83,41 @@ export default function Student() {
   const progressPercentage = Math.min((approvedHours / goal) * 100, 100);
   const remainingHours = Math.max(goal - approvedHours, 0);
 
+  // --- LOADING GATEKEEPER (SKELETON SCREEN) ---
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] font-sans">
+        <div className="bg-[#020617] pt-12 pb-32 px-8">
+          <div className="max-w-7xl mx-auto flex justify-between items-center">
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 bg-white/10 rounded-3xl animate-pulse"></div>
+              <div className="space-y-3">
+                <div className="h-8 w-48 bg-white/10 rounded-lg animate-pulse"></div>
+                <div className="h-4 w-32 bg-white/5 rounded-lg animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <main className="max-w-7xl mx-auto px-8 -mt-20">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-32 bg-white rounded-[2rem] shadow-xl animate-pulse border border-slate-100"></div>
+            ))}
+          </div>
+          <div className="bg-white p-8 rounded-[2.5rem] shadow-xl mb-8 border border-slate-100">
+            <div className="h-6 w-1/4 bg-slate-100 rounded mb-4 animate-pulse"></div>
+            <div className="h-4 w-full bg-slate-50 rounded-full animate-pulse"></div>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+             <div className="lg:col-span-1 h-[400px] bg-white rounded-[2.5rem] animate-pulse"></div>
+             <div className="lg:col-span-2 h-[400px] bg-white rounded-[2.5rem] animate-pulse"></div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // --- MAIN RENDER ---
   return (
     <div className="min-h-screen bg-[#f8fafc] font-sans text-slate-900 pb-20">
       
