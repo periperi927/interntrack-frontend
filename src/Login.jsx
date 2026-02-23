@@ -1,14 +1,11 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom'; // Added Link back
 import axios from 'axios';
-import { Link } from 'react-router-dom';
 
 export default function Login() {
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   // --- CENTRALIZED ADMIN SETTING ---
@@ -16,98 +13,75 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
-    if (isRegistering) {
-      try {
-        await axios.post('https://interntrack-api.onrender.com/api/register', { 
-          firstName, 
-          lastName, 
-          email, 
-          password, 
-          role: 'student' // Everyone who registers is a student
-        });
-        alert('Account created! You can now log in.');
-        setIsRegistering(false);
-        setPassword('');
-      } catch (error) {
-        alert('Error creating account. Email might already be taken.');
+    try {
+      const response = await axios.post('https://interntrack-api.onrender.com/api/login', { email, password });
+      
+      // Save user info to local storage
+      localStorage.setItem('userEmail', email);
+      if (response.data.userName) {
+          localStorage.setItem('userName', response.data.userName);
       }
-    } else {
-      try {
-        const response = await axios.post('https://interntrack-api.onrender.com/api/login', { email, password });
-        
-        // Save user info to local storage
-        localStorage.setItem('userEmail', email);
-        if (response.data.userName) {
-            localStorage.setItem('userName', response.data.userName);
-        }
 
-        // --- CENTRALIZED REDIRECT LOGIC ---
-        // We check the email string directly to ensure you are the only Admin
-        if (email.toLowerCase().trim() === MAIN_ADMIN_EMAIL.toLowerCase().trim()) {
-          navigate('/supervisor');
-        } else {
-          navigate('/student');
-        }
-      } catch (error) {
-        alert('Invalid email or password!');
+      // --- REDIRECT LOGIC ---
+      // Check if the email belongs to the Supervisor
+      if (email.toLowerCase().trim() === MAIN_ADMIN_EMAIL.toLowerCase().trim()) {
+        navigate('/supervisor');
+      } else {
+        navigate('/student');
       }
+    } catch (error) {
+      console.error("Login error", error);
+      alert(error.response?.data?.message || 'Invalid email or password!');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
-      <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md border-t-8 border-blue-900">
-        <img src="/logo.png" alt="InternTrack Logo" className="w-20 h-20 mx-auto mb-4 object-contain" />
-        <h1 className="text-3xl font-bold text-blue-900 mb-2 text-center">InternTrack</h1>
-        <p className="text-gray-500 mb-6 text-center">
-          {isRegistering ? 'Create a new secure account' : 'Please sign in to continue'}
-        </p>
+    <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4 font-sans">
+      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border-t-8 border-blue-900">
+        <div className="text-center mb-8">
+          <img src="/logo.png" alt="InternTrack Logo" className="w-20 h-20 mx-auto mb-4 object-contain" />
+          <h1 className="text-3xl font-bold text-blue-900">InternTrack</h1>
+          <p className="text-gray-500 mt-2">Please sign in to continue</p>
+        </div>
         
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase">Email Address</label>
+            <input 
+              type="email" placeholder="john@example.com" required
+              className="w-full p-3 mt-1 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              value={email} onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
           
-          {isRegistering && (
-            <div className="flex gap-2">
-              <input 
-                type="text" placeholder="First Name" required
-                className="border p-3 rounded bg-gray-50 focus:outline-blue-500 w-1/2"
-                value={firstName} onChange={(e) => setFirstName(e.target.value)}
-              />
-              <input 
-                type="text" placeholder="Last Name" required
-                className="border p-3 rounded bg-gray-50 focus:outline-blue-500 w-1/2"
-                value={lastName} onChange={(e) => setLastName(e.target.value)}
-              />
-            </div>
-          )}
-
-          <input 
-            type="email" placeholder="Email Address" required
-            className="border p-3 rounded bg-gray-50 focus:outline-blue-500"
-            value={email} onChange={(e) => setEmail(e.target.value)}
-          />
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase">Password</label>
+            <input 
+              type="password" placeholder="••••••••" required
+              className="w-full p-3 mt-1 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              value={password} onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
           
-          <input 
-            type="password" placeholder="Password" required
-            className="border p-3 rounded bg-gray-50 focus:outline-blue-500"
-            value={password} onChange={(e) => setPassword(e.target.value)}
-          />
-          
-          <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-700 transition mt-2">
-            {isRegistering ? 'Register Account' : 'Login'}
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 transition shadow-lg disabled:bg-gray-400 mt-2"
+          >
+            {loading ? "Signing in..." : "Login"}
           </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            {isRegistering ? 'Already have an account?' : 'Need an account?'} 
-            <button 
-              type="button"
-              className="ml-1 text-blue-600 hover:underline font-semibold"
-              onClick={() => setIsRegistering(!isRegistering)}
-            >
-              {isRegistering ? 'Log in here' : 'Register here'}
-            </button>
+        <div className="mt-8 text-center">
+          <p className="text-sm text-gray-600 font-semibold">
+            Need an account? 
+            <Link to="/register" className="ml-1 text-blue-600 hover:underline">
+              Create one here
+            </Link>
           </p>
         </div>
       </div>
