@@ -7,7 +7,7 @@ export default function Student() {
   const [form, setForm] = useState({ hours: '', description: '' });
   const navigate = useNavigate();
 
-  // --- NAME LOGIC START ---
+  // --- NAME LOGIC ---
   const currentUserEmail = localStorage.getItem('userEmail') || 'Guest';
   const storedName = localStorage.getItem('userName');
 
@@ -18,9 +18,7 @@ export default function Student() {
     return firstName.charAt(0).toUpperCase() + firstName.slice(1);
   };
 
-  // Prioritize the actual name from the database, fallback to email formatting
   const studentName = storedName || formatName(currentUserEmail);
-  // --- NAME LOGIC END ---
 
   useEffect(() => {
     fetchLogs();
@@ -55,7 +53,7 @@ export default function Student() {
       await axios.post('https://interntrack-api.onrender.com/api/logs', {
         ...form,
         student: currentUserEmail,
-        studentName: studentName, // Optional: useful if you want to save the name with the log
+        studentName: studentName,
         date: new Date()
       });
       setForm({ hours: '', description: '' }); 
@@ -65,6 +63,7 @@ export default function Student() {
     }
   };
 
+  // --- DATA LOGIC ---
   const myLogs = logs.filter(log => log.student === currentUserEmail);
 
   const approvedHours = myLogs
@@ -79,130 +78,182 @@ export default function Student() {
   const progressPercentage = Math.min((approvedHours / goal) * 100, 100);
   const remainingHours = Math.max(goal - approvedHours, 0);
 
-  const getProgressBarColor = () => {
-    if (progressPercentage >= 100) return 'bg-purple-600 shadow-[0_0_15px_rgba(147,51,234,0.5)]';
-    if (progressPercentage >= 80) return 'bg-green-500';
-    if (progressPercentage >= 50) return 'bg-blue-400';
-    return 'bg-blue-600';
-  };
-
   return (
-    <div className="min-h-screen bg-gray-100 p-8 font-sans">
-      <header className="flex justify-between items-center mb-10 border-b-2 border-gray-200 pb-6">
-        <div className="flex items-center gap-6">
-          <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-100">
-            <img src="/logo.png" alt="InternTrack Logo" className="w-40 h-auto object-contain" />
+    <div className="min-h-screen bg-[#f8fafc] font-sans text-slate-900 pb-20">
+      
+      {/* --- HEADER --- */}
+      <header className="bg-[#020617] text-white pt-12 pb-32 px-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px]"></div>
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center relative z-10 gap-8">
+          <div className="flex items-center gap-6">
+            <div className="bg-white/10 p-4 rounded-[1.5rem] backdrop-blur-xl border border-white/10 shadow-2xl">
+              <img src="/logo.png" alt="Logo" className="w-12 h-12 object-contain brightness-200" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-black tracking-tight">Student Portal</h1>
+              <p className="text-blue-400 font-bold text-xs uppercase tracking-[0.3em] mt-1 italic">
+                Welcome back, <span className="text-white underline decoration-blue-500 underline-offset-4">{studentName}</span>
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-4xl font-extrabold text-blue-900 tracking-tight">Student Portal</h1>
-            <p className="text-gray-600 italic font-medium">Welcome back, <span className="text-blue-600 font-bold">{studentName}</span>!</p>
-          </div>
+          <button 
+            onClick={() => { localStorage.clear(); navigate('/'); }} 
+            className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white px-8 py-3 rounded-2xl font-bold transition-all border border-red-500/20 shadow-lg"
+          >
+            Logout
+          </button>
         </div>
-        <button onClick={() => {
-          localStorage.clear(); // Clears email and name on logout
-          navigate('/');
-        }} className="bg-white text-red-500 border border-red-100 px-6 py-2 rounded-full font-bold hover:bg-red-500 hover:text-white transition-all shadow-sm">Logout</button>
       </header>
 
-      {/* STATS WIDGETS */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
-          <p className="text-sm text-gray-500 uppercase font-bold">Approved Hours</p>
-          <h3 className="text-3xl font-bold text-blue-900">{approvedHours} <span className="text-lg text-gray-400">/ {goal}</span></h3>
-        </div>
+      <main className="max-w-7xl mx-auto px-8 -mt-20 relative z-20">
         
-        <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-yellow-500">
-          <p className="text-sm text-gray-500 uppercase font-bold">Pending Approval</p>
-          <h3 className="text-3xl font-bold text-yellow-600">{pendingHours} <span className="text-lg text-gray-400">hrs</span></h3>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-purple-500">
-          <p className="text-sm text-gray-500 uppercase font-bold">Remaining</p>
-          <h3 className="text-3xl font-bold text-purple-900">{remainingHours} <span className="text-lg text-gray-400">hrs</span></h3>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
-          <p className="text-sm text-gray-500 uppercase font-bold">Completion</p>
-          <h3 className="text-3xl font-bold text-green-600">{progressPercentage.toFixed(1)}%</h3>
-        </div>
-      </div>
-
-      {/* DYNAMIC PROGRESS BAR */}
-      <div className="bg-white p-6 rounded-xl shadow-sm mb-8 border border-gray-100">
-        <div className="flex justify-between mb-2">
-          <span className="font-bold text-gray-700">OJT Progress Journey</span>
-          <span className="font-bold text-blue-600">{approvedHours} / {goal} Hours</span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden shadow-inner">
-          <div 
-            className={`${getProgressBarColor()} h-4 rounded-full transition-all duration-1000 ease-in-out`} 
-            style={{ width: `${progressPercentage}%` }}
-          ></div>
-        </div>
-        {progressPercentage >= 100 && (
-            <p className="text-center text-purple-600 font-black text-xs mt-3 uppercase tracking-widest animate-pulse">🎉 Target Requirement Met! 🎉</p>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* FORM */}
-        <div className="lg:col-span-1 bg-white p-6 rounded-lg shadow-md h-fit border-t-4 border-blue-600">
-          <h2 className="text-xl font-bold mb-4 border-b pb-2 text-gray-800">Submit Hours</h2>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Logged in as:</label>
-            <input type="text" readOnly className="border p-2 rounded bg-gray-50 text-gray-400 text-sm" value={currentUserEmail} />
-            
-            <label className="text-xs font-bold text-gray-500">Hours Rendered Today:</label>
-            <input type="number" placeholder="Enter number of hours" className="border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none transition" value={form.hours} onChange={(e) => setForm({...form, hours: e.target.value})} />
-            
-            <label className="text-xs font-bold text-gray-500">What did you do today?</label>
-            <textarea placeholder="Describe your tasks..." className="border p-2 rounded h-24 focus:ring-2 focus:ring-blue-500 outline-none transition" value={form.description} onChange={(e) => setForm({...form, description: e.target.value})} />
-            
-            <button type="submit" className="bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition shadow-md active:scale-95">Submit Log</button>
-          </form>
-        </div>
-
-        {/* TABLE */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-md border-t-4 border-gray-200">
-          <h2 className="text-xl font-bold mb-4 border-b pb-2 text-gray-800 font-sans">My Activity History</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 text-gray-700">
-                  <th className="p-3 border-b text-xs uppercase tracking-wider font-black">Date</th>
-                  <th className="p-3 border-b text-xs uppercase tracking-wider font-black">Hours</th>
-                  <th className="p-3 border-b text-xs uppercase tracking-wider font-black">Task</th>
-                  <th className="p-3 border-b text-xs uppercase tracking-wider font-black">Status</th>
-                  <th className="p-3 border-b text-xs uppercase tracking-wider font-black">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {myLogs.length === 0 ? (
-                  <tr><td colSpan="5" className="p-10 text-center text-gray-400 italic font-sans">No logs found. Start by submitting your first entry!</td></tr>
-                ) : (
-                  myLogs.map((log) => (
-                    <tr key={log._id} className="hover:bg-gray-50 transition border-b last:border-0">
-                      <td className="p-3 text-sm text-gray-500">{new Date(log.date).toLocaleDateString()}</td>
-                      <td className="p-3 font-bold text-blue-900">{log.hours}h</td>
-                      <td className="p-3 text-sm text-gray-600">{log.description}</td>
-                      <td className="p-3">
-                        <span className={`px-2 py-1 rounded text-[10px] font-black uppercase ${log.status === 'Approved' ? 'bg-green-100 text-green-700' : log.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                          {log.status}
-                        </span>
-                      </td>
-                      <td className="p-3">
-                        <button onClick={() => deleteLog(log._id)} className="text-gray-300 hover:text-red-600 transition p-2">
-                          🗑️
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+        {/* --- STAT CARDS --- */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-[2rem] shadow-xl border border-slate-100 transform hover:scale-[1.02] transition-transform">
+            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-2">Approved Hours</p>
+            <h3 className="text-3xl font-black text-blue-600">{approvedHours} <span className="text-sm text-slate-300">/ {goal}</span></h3>
+          </div>
+          <div className="bg-white p-6 rounded-[2rem] shadow-xl border-l-4 border-orange-500 transform hover:scale-[1.02] transition-transform">
+            <p className="text-orange-500 text-[10px] font-black uppercase tracking-widest mb-2">Pending</p>
+            <h3 className="text-3xl font-black text-slate-800">{pendingHours}h</h3>
+          </div>
+          <div className="bg-white p-6 rounded-[2rem] shadow-xl border-l-4 border-purple-500 transform hover:scale-[1.02] transition-transform">
+            <p className="text-purple-500 text-[10px] font-black uppercase tracking-widest mb-2">Remaining</p>
+            <h3 className="text-3xl font-black text-slate-800">{remainingHours}h</h3>
+          </div>
+          <div className="bg-blue-600 p-6 rounded-[2rem] shadow-2xl shadow-blue-500/30 text-white transform hover:scale-[1.02] transition-transform">
+            <p className="text-blue-100 text-[10px] font-black uppercase tracking-widest mb-2">Completion</p>
+            <h3 className="text-3xl font-black">{progressPercentage.toFixed(1)}%</h3>
           </div>
         </div>
-      </div>
+
+        {/* --- DYNAMIC PROGRESS BAR --- */}
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl mb-8 border border-slate-100">
+          <div className="flex justify-between items-end mb-4">
+            <div>
+              <h2 className="text-lg font-black text-slate-800 tracking-tight">OJT Progress Journey</h2>
+              <p className="text-xs text-slate-400 font-medium">Rendered hours are updated upon admin approval</p>
+            </div>
+            <span className="text-sm font-black text-blue-600 bg-blue-50 px-4 py-1 rounded-full">{approvedHours} / {goal} Hours</span>
+          </div>
+          <div className="w-full bg-slate-100 h-4 rounded-full overflow-hidden p-1 shadow-inner relative">
+            <div 
+              className={`h-full rounded-full transition-all duration-1000 ease-in-out ${
+                progressPercentage >= 100 ? 'bg-gradient-to-r from-purple-600 to-indigo-600 shadow-[0_0_20px_rgba(147,51,234,0.3)]' : 'bg-gradient-to-r from-blue-600 to-blue-400'
+              }`} 
+              style={{ width: `${progressPercentage}%` }}
+            ></div>
+          </div>
+          {progressPercentage >= 100 && (
+            <p className="text-center text-purple-600 font-black text-[10px] mt-4 uppercase tracking-[0.3em] animate-pulse">
+              🎉 Congratulations! Target Requirement Met! 🎉
+            </p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* --- FORM SIDEBAR --- */}
+          <div className="lg:col-span-1">
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 sticky top-8">
+              <h2 className="text-2xl font-black mb-6 text-slate-800">Submit Hours</h2>
+              <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Student Email</label>
+                  <input type="text" readOnly className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl text-slate-400 text-xs font-bold outline-none cursor-not-allowed" value={currentUserEmail} />
+                </div>
+                
+                <div>
+                  <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest mb-2 block">Hours Rendered</label>
+                  <input 
+                    type="number" 
+                    placeholder="e.g. 8" 
+                    className="w-full border border-slate-200 p-4 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-sm font-bold" 
+                    value={form.hours} 
+                    onChange={(e) => setForm({...form, hours: e.target.value})} 
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest mb-2 block">Task Description</label>
+                  <textarea 
+                    placeholder="What did you work on today?" 
+                    className="w-full border border-slate-200 p-4 rounded-xl h-32 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-sm font-medium resize-none" 
+                    value={form.description} 
+                    onChange={(e) => setForm({...form, description: e.target.value})} 
+                  />
+                </div>
+                
+                <button type="submit" className="bg-[#020617] text-white font-black py-4 rounded-2xl hover:bg-blue-600 transition-all shadow-xl shadow-blue-900/10 active:scale-95 text-sm tracking-widest uppercase">
+                  Submit Log
+                </button>
+              </form>
+            </div>
+          </div>
+
+          {/* --- HISTORY TABLE --- */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
+              <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                <h2 className="text-xl font-black text-slate-800">Activity History</h2>
+                <span className="text-[10px] font-bold bg-white px-3 py-1 rounded-full border border-slate-200 text-slate-400 uppercase tracking-tighter">Total Entries: {myLogs.length}</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="text-slate-400 text-[10px] uppercase font-black tracking-widest border-b border-slate-50">
+                      <th className="p-6">Date</th>
+                      <th className="p-6">Task</th>
+                      <th className="p-6 text-center">Status</th>
+                      <th className="p-6 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {myLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan="4" className="p-20 text-center text-slate-400 italic font-medium">
+                          No logs found. Start by submitting your first entry!
+                        </td>
+                      </tr>
+                    ) : (
+                      [...myLogs].sort((a,b) => new Date(b.date) - new Date(a.date)).map((log) => (
+                        <tr key={log._id} className="hover:bg-slate-50/50 transition-all group">
+                          <td className="p-6">
+                            <p className="text-sm font-bold text-slate-800">{new Date(log.date).toLocaleDateString()}</p>
+                            <p className="text-blue-600 text-[10px] font-black uppercase mt-1">{log.hours} Hours</p>
+                          </td>
+                          <td className="p-6">
+                            <p className="text-sm text-slate-500 font-medium line-clamp-2 max-w-xs group-hover:text-slate-900 transition-colors">{log.description}</p>
+                          </td>
+                          <td className="p-6 text-center">
+                            <span className={`px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                              log.status === 'Approved' ? 'bg-green-100 text-green-700' : 
+                              log.status === 'Rejected' ? 'bg-red-100 text-red-700' : 
+                              'bg-orange-100 text-orange-700'
+                            }`}>
+                              {log.status}
+                            </span>
+                          </td>
+                          <td className="p-6 text-right">
+                            <button 
+                              onClick={() => deleteLog(log._id)} 
+                              className="bg-slate-50 hover:bg-red-50 text-slate-300 hover:text-red-500 p-2.5 rounded-xl transition-all"
+                              title="Delete Log"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
